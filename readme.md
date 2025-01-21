@@ -1,0 +1,1 @@
+A pet project to revise my knowledge about android development with latest jetpack architecture
