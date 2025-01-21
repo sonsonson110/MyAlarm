@@ -1,7 +1,5 @@
 package com.pson.myalarm.ui.screens.alarm_edit
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,7 +45,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.input.ImeAction
@@ -56,7 +53,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pson.myalarm.R
 import com.pson.myalarm.data.model.DateOfWeek
-import com.pson.myalarm.ui.screens.alarm_list.AlarmListUiState
 import com.pson.myalarm.ui.shared.DayCircle
 import java.time.LocalTime
 
@@ -68,26 +64,47 @@ internal fun AlarmEditScreen(
     viewModel: AlarmEditViewModel = viewModel(factory = AlarmEditViewModel.Factory)
 ) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle()
+    val isBusyPersisting = (uiState.value as? AlarmEditUiState.Success)?.let {
+        it.isSaving || it.isDeleting
+    } ?: true
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Edit alarm") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateUp) {
+
+                    IconButton(
+                        onClick = onNavigateUp,
+                        enabled = !isBusyPersisting
+                    ) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "navigate up button"
+                            contentDescription = "Navigate up button"
                         )
                     }
                 },
                 actions = {
-                    IconButton(onClick = { TODO() }) {
-                        Icon(
-                            Icons.Outlined.Delete,
-                            "Delete",
-                            tint = Color.Red
-                        )
+                    val isUpdating = (uiState.value as? AlarmEditUiState.Success)?.id != 0L
+                    if (isUpdating) {
+                        IconButton(
+                            onClick = { viewModel.deleteAlarm(onNavigateUp) },
+                            enabled = !isBusyPersisting
+                        ) {
+                            val isDeleting = (uiState.value as? AlarmEditUiState.Success)?.isDeleting ?: false
+                            if (!isDeleting) {
+                                Icon(
+                                    Icons.Outlined.Delete,
+                                    "Delete",
+                                    tint = Color.Red
+                                )
+                            } else {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    color = Color.White
+                                )
+                            }
+                        }
                     }
                 })
         }
@@ -111,7 +128,7 @@ internal fun AlarmEditScreen(
                         .padding(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text((uiState.value as AlarmListUiState.Error).message)
+                    Text((uiState.value as AlarmEditUiState.Error).message)
                 }
             }
 
@@ -217,7 +234,19 @@ internal fun AlarmEditScreen(
                         modifier = Modifier.fillMaxWidth(),
                         contentAlignment = Alignment.CenterEnd
                     ) {
-                        Button(onClick = { TODO() }) { Text("Save") }
+                        Button(
+                            onClick = { viewModel.saveAlarm(onNavigateUp) },
+                            enabled = !isBusyPersisting
+                        ) {
+                            if (state.isSaving) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    color = Color.White
+                                )
+                            } else {
+                                Text("Save")
+                            }
+                        }
                     }
 
                     Spacer(Modifier.height(28.dp))

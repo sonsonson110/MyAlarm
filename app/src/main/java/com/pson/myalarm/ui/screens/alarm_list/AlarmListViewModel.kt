@@ -29,11 +29,19 @@ class AlarmListViewModel(
 
     private fun getAlarms() {
         viewModelScope.launch {
-            val alarms = alarmRepository.getAllAlarms()
-            if (alarms.isEmpty())
-                _uiState.update { AlarmListUiState.Empty }
-            else
-                _uiState.update { AlarmListUiState.Success(alarms) }
+            alarmRepository.getAllAlarms()
+                .collect { alarms ->
+                    _uiState.update {
+                        if (alarms.isEmpty()) AlarmListUiState.Empty
+                        else AlarmListUiState.Success(alarms)
+                    }
+                }
+        }
+    }
+
+    fun toggleAlarm(alarmId: Long) {
+        viewModelScope.launch {
+            alarmRepository.toggleAlarmActivation(alarmId)
         }
     }
 

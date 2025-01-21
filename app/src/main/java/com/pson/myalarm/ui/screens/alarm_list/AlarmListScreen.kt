@@ -1,8 +1,6 @@
 package com.pson.myalarm.ui.screens.alarm_list
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Notifications
@@ -32,7 +29,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -84,7 +80,8 @@ internal fun AlarmListScreen(
                             item.weeklySchedules,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { onEditAlarm(item.alarm.id) }
+                                .clickable { onEditAlarm(item.alarm.id) },
+                            onToggleAlarm = viewModel::toggleAlarm
                         )
                     }
                     item { Spacer(Modifier.height(16.dp)) }
@@ -145,6 +142,7 @@ internal fun AlarmListScreen(
 internal fun AlarmItem(
     alarm: Alarm,
     weeklySchedules: List<WeeklySchedule>,
+    onToggleAlarm: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val timeFormatter = DateTimeFormatter.ofPattern("hh:mm a")
@@ -185,7 +183,7 @@ internal fun AlarmItem(
                     }
                 }
             }
-            Switch(alarm.isActive, onCheckedChange = {})
+            Switch(alarm.isActive, onCheckedChange = { onToggleAlarm(alarm.id) })
         }
     }
 }

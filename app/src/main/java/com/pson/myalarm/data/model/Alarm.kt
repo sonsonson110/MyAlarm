@@ -9,6 +9,6 @@ data class Alarm(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val alarmTime: LocalTime,
     val note: String? = null,
-    val snoozeTimeMinutes: Int = 5,
+    val snoozeTimeMinutes: Int? = null,
     val isActive: Boolean = true
 )

@@ -32,7 +32,7 @@ internal fun Navigation(navController: NavHostController, modifier: Modifier = M
             arguments = listOf(
                 navArgument("alarmId") {
                     type = NavType.LongType
-                    defaultValue = -1
+                    defaultValue = 0L
                 })
         ) {
             AlarmEditScreen(onNavigateUp = { navController.popBackStack() })

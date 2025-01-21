@@ -8,8 +8,12 @@ import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.pson.myalarm.MyAlarmApplication
+import com.pson.myalarm.data.model.Alarm
+import com.pson.myalarm.data.model.AlarmWithWeeklySchedules
 import com.pson.myalarm.data.model.DateOfWeek
+import com.pson.myalarm.data.model.WeeklySchedule
 import com.pson.myalarm.data.repository.AlarmRepository
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -20,7 +24,7 @@ class AlarmEditViewModel(
     private val alarmRepository: AlarmRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
-    private val alarmId: Long? = savedStateHandle["alarmId"]
+    private val alarmId: Long = checkNotNull(savedStateHandle["alarmId"])
 
     private val _uiState: MutableStateFlow<AlarmEditUiState> =
         MutableStateFlow(AlarmEditUiState.Loading)
@@ -33,7 +37,7 @@ class AlarmEditViewModel(
     fun onUiStateChange(state: AlarmEditUiState.Success) = _uiState.update { state }
 
     private fun loadAlarm() {
-        if (alarmId != null && alarmId != -1L) {
+        if (alarmId != 0L) {
             viewModelScope.launch {
                 val item = alarmRepository.getAlarm(alarmId)
                 if (item == null)
@@ -51,6 +55,49 @@ class AlarmEditViewModel(
             }
         } else {
             _uiState.update { AlarmEditUiState.Success() }
+        }
+    }
+
+    fun deleteAlarm(onDone: (() -> Unit)) {
+        val state = _uiState.value as AlarmEditUiState.Success
+        _uiState.update { state.copy(isDeleting = true) }
+        viewModelScope.launch {
+            delay(2000L)
+            try {
+                alarmRepository.deleteAlarm(alarmId)
+                onDone()
+            } catch (_: Exception) {
+                _uiState.update {
+                    AlarmEditUiState.Error("Failed to delete alarm")
+                }
+            }
+        }
+    }
+
+    fun saveAlarm(onDone: (() -> Unit)) {
+        val state = _uiState.value as AlarmEditUiState.Success
+        _uiState.update { state.copy(isSaving = true) }
+        viewModelScope.launch {
+            delay(2000L)
+            try {
+                alarmRepository.saveAlarm(AlarmWithWeeklySchedules(
+                    alarm = Alarm(
+                        id = state.id,
+                        alarmTime = state.alarmTime,
+                        note = state.note.ifBlank { null },
+                        snoozeTimeMinutes = state.snoozeOption.minutes,
+                        isActive = state.isActive
+                    ),
+                    weeklySchedules = state.repeatDates.map {
+                        WeeklySchedule(dateOfWeek = it)
+                    }
+                ))
+                onDone()
+            } catch (_: Exception) {
+                _uiState.update {
+                    AlarmEditUiState.Error("Failed to save alarm")
+                }
+            }
         }
     }
 
@@ -79,8 +126,12 @@ sealed interface AlarmEditUiState {
         val id: Long = 0,
         val alarmTime: LocalTime = LocalTime.now().plusMinutes(15),
         val note: String = "",
-        val snoozeOption: SnoozeOption = SnoozeOption.FiveMin,
-        val repeatDates: List<DateOfWeek> = emptyList()
+        val snoozeOption: SnoozeOption = SnoozeOption.Disabled,
+        val repeatDates: List<DateOfWeek> = emptyList(),
+        val isActive: Boolean = true,
+        // ui flag
+        val isSaving: Boolean = false,
+        val isDeleting: Boolean = false
     ) : AlarmEditUiState
 
     data object Loading : AlarmEditUiState
@@ -88,8 +139,8 @@ sealed interface AlarmEditUiState {
     data class Error(val message: String) : AlarmEditUiState
 }
 
-sealed class SnoozeOption(private val minutes: Int, val displayText: String) {
-    data object Disabled : SnoozeOption(0, "Disable")
+sealed class SnoozeOption(val minutes: Int?, val displayText: String) {
+    data object Disabled : SnoozeOption(null, "Disable")
     data object FiveMin : SnoozeOption(5, "5 minutes")
     data object TenMin : SnoozeOption(10, "10 minutes")
     data object TwentyMin : SnoozeOption(20, "20 minutes")
@@ -99,7 +150,8 @@ sealed class SnoozeOption(private val minutes: Int, val displayText: String) {
     companion object {
         val options = listOf(Disabled, FiveMin, TenMin, TwentyMin, ThirtyMin, OneHour)
 
-        fun fromMinutes(minutes: Int): SnoozeOption {
+        fun fromMinutes(minutes: Int?): SnoozeOption {
+            if (minutes == null) return Disabled
             return options.find { it.minutes == minutes } ?: Disabled
         }
     }
