@@ -177,6 +177,7 @@ internal fun AlarmEditScreen(
                             onValueChange = {
                                 viewModel.onUiStateChange(state.copy(note = it))
                             },
+                            placeholder = { Text("Leave a note") },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                             keyboardOptions = KeyboardOptions(
