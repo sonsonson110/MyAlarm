@@ -14,7 +14,10 @@ import com.pson.myalarm.data.model.DateOfWeek
 import com.pson.myalarm.data.model.WeeklySchedule
 import com.pson.myalarm.data.repository.AlarmRepository
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -30,11 +33,24 @@ class AlarmEditViewModel(
         MutableStateFlow(AlarmEditUiState.Loading)
     val uiState = _uiState.asStateFlow()
 
+    private val _snackbarMessages = MutableSharedFlow<String>()
+    val snackbarMessages: SharedFlow<String> = _snackbarMessages.asSharedFlow()
+
     init {
         loadAlarm()
     }
 
     fun onUiStateChange(state: AlarmEditUiState.Success) = _uiState.update { state }
+
+    fun onRepeatDatesChange(selectedDate: DateOfWeek) {
+        val state = _uiState.value as AlarmEditUiState.Success
+        var currentDates = state.repeatDates
+        currentDates = if (currentDates.contains(selectedDate))
+            currentDates.minus(selectedDate)
+        else
+            currentDates.plus(selectedDate)
+        onUiStateChange(state.copy(repeatDates = currentDates))
+    }
 
     private fun loadAlarm() {
         if (alarmId != 0L) {
@@ -49,7 +65,7 @@ class AlarmEditViewModel(
                             alarmTime = item.alarm.alarmTime,
                             note = item.alarm.note ?: "",
                             snoozeOption = SnoozeOption.fromMinutes(item.alarm.snoozeTimeMinutes),
-                            repeatDates = item.weeklySchedules.map { it.dateOfWeek }
+                            repeatDates = item.weeklySchedules.map { it.dateOfWeek }.toSet()
                         )
                     }
             }
@@ -66,10 +82,10 @@ class AlarmEditViewModel(
             try {
                 alarmRepository.deleteAlarm(alarmId)
                 onDone()
-            } catch (_: Exception) {
-                _uiState.update {
-                    AlarmEditUiState.Error("Failed to delete alarm")
-                }
+            } catch (e: Exception) {
+                _snackbarMessages.emit("Failed to delete alarm: ${e.message ?: "Unknown error"}")
+            } finally {
+                _uiState.update { state.copy(isDeleting = false) }
             }
         }
     }
@@ -84,7 +100,7 @@ class AlarmEditViewModel(
                     alarm = Alarm(
                         id = state.id,
                         alarmTime = state.alarmTime,
-                        note = state.note.ifBlank { null },
+                        note = state.note.trim().ifEmpty { null },
                         snoozeTimeMinutes = state.snoozeOption.minutes,
                         isActive = state.isActive
                     ),
@@ -93,10 +109,10 @@ class AlarmEditViewModel(
                     }
                 ))
                 onDone()
-            } catch (_: Exception) {
-                _uiState.update {
-                    AlarmEditUiState.Error("Failed to save alarm")
-                }
+            } catch (e: Exception) {
+                _snackbarMessages.emit("Failed to save alarm: ${e.message ?: "Unknown error"}")
+            } finally {
+                _uiState.update { state.copy(isSaving = false) }
             }
         }
     }
@@ -127,7 +143,7 @@ sealed interface AlarmEditUiState {
         val alarmTime: LocalTime = LocalTime.now().plusMinutes(15),
         val note: String = "",
         val snoozeOption: SnoozeOption = SnoozeOption.Disabled,
-        val repeatDates: List<DateOfWeek> = emptyList(),
+        val repeatDates: Set<DateOfWeek> = emptySet(),
         val isActive: Boolean = true,
         // ui flag
         val isSaving: Boolean = false,

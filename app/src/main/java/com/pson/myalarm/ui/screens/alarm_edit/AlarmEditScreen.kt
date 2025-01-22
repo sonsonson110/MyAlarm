@@ -1,5 +1,8 @@
 package com.pson.myalarm.ui.screens.alarm_edit
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +33,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TimePickerState
@@ -63,52 +68,47 @@ internal fun AlarmEditScreen(
     modifier: Modifier = Modifier,
     viewModel: AlarmEditViewModel = viewModel(factory = AlarmEditViewModel.Factory)
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+
     val uiState = viewModel.uiState.collectAsStateWithLifecycle()
     val isBusyPersisting = (uiState.value as? AlarmEditUiState.Success)?.let {
         it.isSaving || it.isDeleting
     } ?: true
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Edit alarm") },
-                navigationIcon = {
-
-                    IconButton(
-                        onClick = onNavigateUp,
-                        enabled = !isBusyPersisting
-                    ) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Navigate up button"
-                        )
-                    }
-                },
-                actions = {
-                    val isUpdating = (uiState.value as? AlarmEditUiState.Success)?.id != 0L
-                    if (isUpdating) {
-                        IconButton(
-                            onClick = { viewModel.deleteAlarm(onNavigateUp) },
-                            enabled = !isBusyPersisting
-                        ) {
-                            val isDeleting = (uiState.value as? AlarmEditUiState.Success)?.isDeleting ?: false
-                            if (!isDeleting) {
-                                Icon(
-                                    Icons.Outlined.Delete,
-                                    "Delete",
-                                    tint = Color.Red
-                                )
-                            } else {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    color = Color.White
-                                )
-                            }
-                        }
-                    }
-                })
+    // Collect snackbar message
+    LaunchedEffect(Unit) {
+        viewModel.snackbarMessages.collect { message ->
+            snackbarHostState.showSnackbar(message)
         }
-    ) { paddingValues ->
+    }
+
+    Scaffold(snackbarHost = { SnackbarHost(hostState = snackbarHostState) }, topBar = {
+        TopAppBar(title = { Text("Edit alarm") }, navigationIcon = {
+
+            IconButton(
+                onClick = onNavigateUp, enabled = !isBusyPersisting
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Navigate up button"
+                )
+            }
+        }, actions = {
+            val isUpdating = (uiState.value as? AlarmEditUiState.Success)?.id != 0L
+            if (isUpdating) {
+                IconButton(
+                    onClick = { viewModel.deleteAlarm(onNavigateUp) },
+                    enabled = !isBusyPersisting
+                ) {
+                    Icon(
+                        Icons.Outlined.Delete,
+                        "Delete",
+                        tint = if (!isBusyPersisting) Color.Red else Color.Gray.copy(alpha = 0.5f)
+                    )
+                }
+            }
+        })
+    }) { paddingValues ->
         when (uiState.value) {
             is AlarmEditUiState.Loading -> {
                 Box(
@@ -144,8 +144,7 @@ internal fun AlarmEditScreen(
                     viewModel.onUiStateChange(
                         state.copy(
                             alarmTime = LocalTime.of(
-                                timePickerState.hour,
-                                timePickerState.minute
+                                timePickerState.hour, timePickerState.minute
                             )
                         )
                     )
@@ -176,19 +175,16 @@ internal fun AlarmEditScreen(
                         OutlinedTextField(
                             value = state.note,
                             onValueChange = {
-                                viewModel.onUiStateChange(state.copy(note = it.trim()))
+                                viewModel.onUiStateChange(state.copy(note = it))
                             },
                             singleLine = true,
-                            modifier = Modifier
-                                .fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth(),
                             keyboardOptions = KeyboardOptions(
                                 imeAction = ImeAction.Done
                             ),
-                            keyboardActions = KeyboardActions(
-                                onDone = {
-                                    focusManager.clearFocus()
-                                }
-                            ),
+                            keyboardActions = KeyboardActions(onDone = {
+                                focusManager.clearFocus()
+                            }),
                         )
                     }
 
@@ -197,27 +193,25 @@ internal fun AlarmEditScreen(
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Checkbox(
-                            checked = state.repeatDates.isNotEmpty(),
-                            onCheckedChange = {
-                                if (state.repeatDates.isNotEmpty())
-                                    viewModel.onUiStateChange(state.copy(repeatDates = emptyList()))
-                                else
-                                    viewModel.onUiStateChange(state.copy(repeatDates = dateOfWeekEntries.toList()))
-                            })
+                        Checkbox(checked = state.repeatDates.isNotEmpty(), onCheckedChange = {
+                            if (state.repeatDates.isNotEmpty()) viewModel.onUiStateChange(
+                                state.copy(
+                                    repeatDates = emptySet()
+                                )
+                            )
+                            else viewModel.onUiStateChange(state.copy(repeatDates = dateOfWeekEntries.toSet()))
+                        })
                         Text("Repeat alarm")
                     }
                     Row(
-                        modifier = modifier,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         dateOfWeekEntries.forEach { day ->
                             DayCircle(
                                 text = day.abbreviation,
                                 isSelected = state.repeatDates.contains(day),
                                 onClick = {
-                                    val currentDates = state.repeatDates
-                                    viewModel.onUiStateChange(state.copy(repeatDates = currentDates + day))
+                                    viewModel.onRepeatDatesChange(day)
                                 },
                                 modifier = Modifier.size(36.dp)
                             )
@@ -225,33 +219,36 @@ internal fun AlarmEditScreen(
                     }
 
                     // Snooze time select
-                    SnoozeSelector(
-                        selectedOption = state.snoozeOption,
+                    SnoozeSelector(selectedOption = state.snoozeOption,
                         onOptionSelected = { viewModel.onUiStateChange(state.copy(snoozeOption = it)) })
 
                     // Save button
                     Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.CenterEnd
+                        modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd
                     ) {
                         Button(
                             onClick = { viewModel.saveAlarm(onNavigateUp) },
                             enabled = !isBusyPersisting
                         ) {
-                            if (state.isSaving) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    color = Color.White
-                                )
-                            } else {
-                                Text("Save")
-                            }
+                            Text("Save")
                         }
                     }
 
                     Spacer(Modifier.height(28.dp))
 
                     Text(uiState.value.toString())
+                }
+
+                // Overlay when persisting
+                if (isBusyPersisting) {
+                    Box(modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.5f))
+                        .clickable(indication = null, // disable ripple effect
+                            interactionSource = remember { MutableInteractionSource() },
+                            onClick = { }), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
                 }
             }
         }
@@ -268,8 +265,7 @@ internal fun SnoozeSelector(
     var expanded by remember { mutableStateOf(false) }
 
     Row(
-        modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
+        modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             imageVector = ImageVector.vectorResource(R.drawable.outline_snooze_24),
@@ -284,8 +280,7 @@ internal fun SnoozeSelector(
             onExpandedChange = { expanded = it },
             modifier = Modifier.fillMaxWidth()
         ) {
-            OutlinedTextField(
-                value = selectedOption.displayText,
+            OutlinedTextField(value = selectedOption.displayText,
                 onValueChange = {},
                 readOnly = true,
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
@@ -295,24 +290,16 @@ internal fun SnoozeSelector(
                     .menuAnchor()
             )
 
-            ExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
+            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 SnoozeOption.options.forEach { option ->
-                    DropdownMenuItem(
-                        text = { Text(option.displayText) },
-                        onClick = {
-                            onOptionSelected(option)
-                            expanded = false
-                        },
-                        trailingIcon = {
-                            if (option == selectedOption) Icon(
-                                Icons.Filled.Check,
-                                null
-                            )
-                        },
-                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                    DropdownMenuItem(text = { Text(option.displayText) }, onClick = {
+                        onOptionSelected(option)
+                        expanded = false
+                    }, trailingIcon = {
+                        if (option == selectedOption) Icon(
+                            Icons.Filled.Check, null
+                        )
+                    }, contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
                     )
                 }
             }
@@ -323,10 +310,9 @@ internal fun SnoozeSelector(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun DialExample(
-    timePickerState: TimePickerState,
-    modifier: Modifier = Modifier
+    timePickerState: TimePickerState, modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
         TimePicker(
             state = timePickerState,
         )
