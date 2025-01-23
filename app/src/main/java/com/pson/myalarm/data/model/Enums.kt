@@ -1,5 +1,7 @@
 package com.pson.myalarm.data.model
 
+import java.util.Calendar
+
 enum class DateOfWeek {
 
     MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY;
@@ -14,4 +16,16 @@ enum class DateOfWeek {
             SATURDAY -> "Sa"
             SUNDAY -> "Su"
         }
+
+    fun toCalendarDay(): Int {
+        return when (this) {
+            SUNDAY -> Calendar.SUNDAY
+            MONDAY -> Calendar.MONDAY
+            TUESDAY -> Calendar.TUESDAY
+            WEDNESDAY -> Calendar.WEDNESDAY
+            THURSDAY -> Calendar.THURSDAY
+            FRIDAY -> Calendar.FRIDAY
+            SATURDAY -> Calendar.SATURDAY
+        }
+    }
 }

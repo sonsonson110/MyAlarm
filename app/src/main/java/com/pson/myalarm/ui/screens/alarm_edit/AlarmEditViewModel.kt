@@ -8,23 +8,25 @@ import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.pson.myalarm.MyAlarmApplication
+import com.pson.myalarm.core.alarm.AlarmScheduler
 import com.pson.myalarm.data.model.Alarm
 import com.pson.myalarm.data.model.AlarmWithWeeklySchedules
 import com.pson.myalarm.data.model.DateOfWeek
 import com.pson.myalarm.data.model.WeeklySchedule
 import com.pson.myalarm.data.repository.AlarmRepository
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.time.LocalTime
 
 class AlarmEditViewModel(
     private val alarmRepository: AlarmRepository,
+    private val alarmScheduler: AlarmScheduler,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     private val alarmId: Long = checkNotNull(savedStateHandle["alarmId"])
@@ -65,7 +67,8 @@ class AlarmEditViewModel(
                             alarmTime = item.alarm.alarmTime,
                             note = item.alarm.note ?: "",
                             snoozeOption = SnoozeOption.fromMinutes(item.alarm.snoozeTimeMinutes),
-                            repeatDates = item.weeklySchedules.map { it.dateOfWeek }.toSet()
+                            repeatDates = item.weeklySchedules.map { it.dateOfWeek }.toSet(),
+                            isActive = item.alarm.isActive
                         )
                     }
             }
@@ -78,9 +81,9 @@ class AlarmEditViewModel(
         val state = _uiState.value as AlarmEditUiState.Success
         _uiState.update { state.copy(isDeleting = true) }
         viewModelScope.launch {
-            delay(2000L)
             try {
                 alarmRepository.deleteAlarm(alarmId)
+                alarmScheduler.cancel(state.toAlarmWithWeeklySchedules())
                 onDone()
             } catch (e: Exception) {
                 _snackbarMessages.emit("Failed to delete alarm: ${e.message ?: "Unknown error"}")
@@ -94,20 +97,16 @@ class AlarmEditViewModel(
         val state = _uiState.value as AlarmEditUiState.Success
         _uiState.update { state.copy(isSaving = true) }
         viewModelScope.launch {
-            delay(2000L)
             try {
-                alarmRepository.saveAlarm(AlarmWithWeeklySchedules(
-                    alarm = Alarm(
-                        id = state.id,
-                        alarmTime = state.alarmTime,
-                        note = state.note.trim().ifEmpty { null },
-                        snoozeTimeMinutes = state.snoozeOption.minutes,
-                        isActive = state.isActive
-                    ),
-                    weeklySchedules = state.repeatDates.map {
-                        WeeklySchedule(dateOfWeek = it)
-                    }
-                ))
+                val saveItem = state.toAlarmWithWeeklySchedules()
+                val recordId = alarmRepository.saveAlarm(saveItem)
+
+                if (isActive) {
+                    val saveItemWithNewId =
+                        saveItem.copy(alarm = saveItem.alarm.copy(id = recordId))
+                    alarmScheduler.cancel(saveItemWithNewId)
+                    alarmScheduler.schedule(saveItemWithNewId)
+                }
                 onDone()
             } catch (e: Exception) {
                 _snackbarMessages.emit("Failed to save alarm: ${e.message ?: "Unknown error"}")
@@ -124,12 +123,13 @@ class AlarmEditViewModel(
                 extras: CreationExtras
             ): T {
                 // Get the Application object from extras
-                val application = checkNotNull(extras[APPLICATION_KEY])
+                val application = checkNotNull(extras[APPLICATION_KEY]) as MyAlarmApplication
                 // Create a SavedStateHandle for this ViewModel from extras
                 val savedStateHandle = extras.createSavedStateHandle()
 
                 return AlarmEditViewModel(
-                    (application as MyAlarmApplication).alarmRepository,
+                    application.alarmRepository,
+                    application.alarmScheduler,
                     savedStateHandle
                 ) as T
             }
@@ -148,7 +148,20 @@ sealed interface AlarmEditUiState {
         // ui flag
         val isSaving: Boolean = false,
         val isDeleting: Boolean = false
-    ) : AlarmEditUiState
+    ) : AlarmEditUiState {
+        fun toAlarmWithWeeklySchedules(): AlarmWithWeeklySchedules = AlarmWithWeeklySchedules(
+            alarm = Alarm(
+                id = id,
+                alarmTime = alarmTime,
+                note = note.trim().ifEmpty { null },
+                snoozeTimeMinutes = snoozeOption.minutes,
+                isActive = isActive
+            ),
+            weeklySchedules = repeatDates.map {
+                WeeklySchedule(dateOfWeek = it)
+            }
+        )
+    }
 
     data object Loading : AlarmEditUiState
 

@@ -35,9 +35,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.pson.myalarm.data.model.Alarm
+import com.pson.myalarm.data.model.AlarmWithWeeklySchedules
 import com.pson.myalarm.data.model.DateOfWeek
-import com.pson.myalarm.data.model.WeeklySchedule
 import com.pson.myalarm.ui.shared.DayCircle
 import java.time.format.DateTimeFormatter
 
@@ -78,8 +77,7 @@ internal fun AlarmListScreen(
                     item { Spacer(Modifier.height(8.dp)) }
                     items(alarmsWithWeeklySchedules, key = { it.alarm.id }) { item ->
                         AlarmItem(
-                            item.alarm,
-                            item.weeklySchedules,
+                            item = item,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(12.dp))
@@ -143,9 +141,8 @@ internal fun AlarmListScreen(
 
 @Composable
 internal fun AlarmItem(
-    alarm: Alarm,
-    weeklySchedules: List<WeeklySchedule>,
-    onToggleAlarm: (Long) -> Unit,
+    item: AlarmWithWeeklySchedules,
+    onToggleAlarm: (AlarmWithWeeklySchedules) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val timeFormatter = DateTimeFormatter.ofPattern("hh:mm a")
@@ -164,7 +161,7 @@ internal fun AlarmItem(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column {
-                Text(alarm.alarmTime.format(timeFormatter))
+                Text(item.alarm.alarmTime.format(timeFormatter))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -175,18 +172,18 @@ internal fun AlarmItem(
                     )
                     Text("in 20 hours, 30 minutes")
                 }
-                Text(alarm.note ?: "Untitled")
+                Text(item.alarm.note ?: "Untitled")
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     DateOfWeek.entries.forEach { day ->
                         DayCircle(
                             day.abbreviation,
-                            weeklySchedules.any { it.dateOfWeek == day },
+                            item.weeklySchedules.any { it.dateOfWeek == day },
                             modifier = Modifier.size(28.dp)
                         )
                     }
                 }
             }
-            Switch(alarm.isActive, onCheckedChange = { onToggleAlarm(alarm.id) })
+            Switch(item.alarm.isActive, onCheckedChange = { onToggleAlarm(item) })
         }
     }
 }

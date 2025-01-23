@@ -8,6 +8,7 @@ import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.pson.myalarm.MyAlarmApplication
+import com.pson.myalarm.core.alarm.AlarmScheduler
 import com.pson.myalarm.data.model.AlarmWithWeeklySchedules
 import com.pson.myalarm.data.repository.AlarmRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,6 +18,7 @@ import kotlinx.coroutines.launch
 
 class AlarmListViewModel(
     private val alarmRepository: AlarmRepository,
+    private val alarmScheduler: AlarmScheduler,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     private val _uiState: MutableStateFlow<AlarmListUiState> =
@@ -39,9 +41,14 @@ class AlarmListViewModel(
         }
     }
 
-    fun toggleAlarm(alarmId: Long) {
+    fun toggleAlarm(item: AlarmWithWeeklySchedules) {
         viewModelScope.launch {
-            alarmRepository.toggleAlarmActivation(alarmId)
+            if (!item.alarm.isActive) {
+                alarmScheduler.schedule(item)
+            } else {
+                alarmScheduler.cancel(item)
+            }
+            alarmRepository.toggleAlarmActivation(item.alarm.id)
         }
     }
 
@@ -52,12 +59,13 @@ class AlarmListViewModel(
                 extras: CreationExtras
             ): T {
                 // Get the Application object from extras
-                val application = checkNotNull(extras[APPLICATION_KEY])
+                val application = checkNotNull(extras[APPLICATION_KEY]) as MyAlarmApplication
                 // Create a SavedStateHandle for this ViewModel from extras
                 val savedStateHandle = extras.createSavedStateHandle()
 
                 return AlarmListViewModel(
-                    (application as MyAlarmApplication).alarmRepository,
+                    application.alarmRepository,
+                    application.alarmScheduler,
                     savedStateHandle
                 ) as T
             }
