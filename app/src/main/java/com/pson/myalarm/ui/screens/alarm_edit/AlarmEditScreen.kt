@@ -64,7 +64,7 @@ import java.time.LocalTime
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun AlarmEditScreen(
-    onNavigateUp: () -> Unit,
+    onNavigateUp: (Long?) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AlarmEditViewModel = viewModel(factory = AlarmEditViewModel.Factory)
 ) {
@@ -86,7 +86,7 @@ internal fun AlarmEditScreen(
         TopAppBar(title = { Text("Edit alarm") }, navigationIcon = {
 
             IconButton(
-                onClick = onNavigateUp, enabled = !isBusyPersisting
+                onClick = { onNavigateUp(null) }, enabled = !isBusyPersisting
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowBack,
@@ -97,7 +97,7 @@ internal fun AlarmEditScreen(
             val isUpdating = (uiState.value as? AlarmEditUiState.Success)?.id != 0L
             if (isUpdating) {
                 IconButton(
-                    onClick = { viewModel.deleteAlarm(onNavigateUp) },
+                    onClick = { viewModel.deleteAlarm { onNavigateUp(null) } },
                     enabled = !isBusyPersisting
                 ) {
                     Icon(
@@ -228,7 +228,7 @@ internal fun AlarmEditScreen(
                         modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd
                     ) {
                         Button(
-                            onClick = { viewModel.saveAlarm(onNavigateUp) },
+                            onClick = { viewModel.saveAlarm { onNavigateUp(it) } },
                             enabled = !isBusyPersisting
                         ) {
                             Text("Save")

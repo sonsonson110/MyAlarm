@@ -1,6 +1,10 @@
 package com.pson.myalarm.ui.screens
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -14,8 +18,11 @@ import com.pson.myalarm.ui.screens.timer.TimerScreen
 
 @Composable
 internal fun Navigation(navController: NavHostController, modifier: Modifier = Modifier) {
-    NavHost(navController = navController, startDestination = Screens.AlarmScreen.route) {
-        composable(route = Screens.AlarmScreen.route) {
+
+    var savedAlarmId by remember { mutableLongStateOf(-1) }
+
+    NavHost(navController = navController, startDestination = Screens.AlarmListScreen.route) {
+        composable(route = Screens.AlarmListScreen.route) {
             AlarmListScreen(
                 modifier = modifier,
                 onEditAlarm = { alarmId ->
@@ -24,7 +31,9 @@ internal fun Navigation(navController: NavHostController, modifier: Modifier = M
                             alarmId
                         )
                     )
-                }
+                },
+                recentSavedAlarmId = savedAlarmId,
+                resetRecentSavedAlarmId = { savedAlarmId = -1 }
             )
         }
         composable(
@@ -35,7 +44,11 @@ internal fun Navigation(navController: NavHostController, modifier: Modifier = M
                     defaultValue = 0L
                 })
         ) {
-            AlarmEditScreen(onNavigateUp = { navController.popBackStack() })
+            AlarmEditScreen(onNavigateUp = { recentlySavedAlarmId ->
+                // Avoid re-trigger old highlighted item
+                savedAlarmId = recentlySavedAlarmId ?: -1
+                navController.popBackStack()
+            })
         }
 
         composable(route = Screens.TimerScreen.route) { TimerScreen(modifier) }

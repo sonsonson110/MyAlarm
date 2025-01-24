@@ -38,7 +38,7 @@ class MainActivity : ComponentActivity() {
                         val currentRoute =
                             navController.currentBackStackEntryAsState().value?.destination?.route
                         if (currentRoute in listOf(
-                                Screens.AlarmScreen.route,
+                                Screens.AlarmListScreen.route,
                                 Screens.TimerScreen.route,
                                 Screens.StopwatchScreen.route
                             )
@@ -65,7 +65,7 @@ internal fun BottomNavigationBar(navController: NavHostController) {
     val topLevelRoutes = listOf(
         TopLevelRoute(
             "Alarm",
-            Screens.AlarmScreen.route,
+            Screens.AlarmListScreen.route,
             ImageVector.vectorResource(R.drawable.outline_access_alarm_24)
         ),
         TopLevelRoute(

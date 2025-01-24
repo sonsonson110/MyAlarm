@@ -27,7 +27,7 @@ import java.time.LocalTime
 class AlarmEditViewModel(
     private val alarmRepository: AlarmRepository,
     private val alarmScheduler: AlarmScheduler,
-    savedStateHandle: SavedStateHandle
+    private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     private val alarmId: Long = checkNotNull(savedStateHandle["alarmId"])
 
@@ -93,7 +93,7 @@ class AlarmEditViewModel(
         }
     }
 
-    fun saveAlarm(onDone: (() -> Unit)) {
+    fun saveAlarm(onDone: ((Long) -> Unit)) {
         val state = _uiState.value as AlarmEditUiState.Success
         _uiState.update { state.copy(isSaving = true) }
         viewModelScope.launch {
@@ -107,7 +107,8 @@ class AlarmEditViewModel(
                     alarmScheduler.cancel(saveItemWithNewId)
                     alarmScheduler.schedule(saveItemWithNewId)
                 }
-                onDone()
+                savedStateHandle["alarmId"] = recordId
+                onDone(recordId)
             } catch (e: Exception) {
                 _snackbarMessages.emit("Failed to save alarm: ${e.message ?: "Unknown error"}")
             } finally {
