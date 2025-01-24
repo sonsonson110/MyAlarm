@@ -6,11 +6,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.BottomNavigation
-import androidx.compose.material.BottomNavigationItem
-import androidx.compose.material.Icon
-import androidx.compose.material.Text
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -79,11 +79,11 @@ internal fun BottomNavigationBar(navController: NavHostController) {
             ImageVector.vectorResource(R.drawable.outline_hourglass_24)
         )
     )
-    BottomNavigation {
+    NavigationBar {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentDestination = navBackStackEntry?.destination
         topLevelRoutes.forEach { topLevelRoute ->
-            BottomNavigationItem(
+            NavigationBarItem(
                 icon = { Icon(topLevelRoute.icon, contentDescription = topLevelRoute.name) },
                 label = { Text(topLevelRoute.name) },
                 selected = currentDestination?.hierarchy?.any {

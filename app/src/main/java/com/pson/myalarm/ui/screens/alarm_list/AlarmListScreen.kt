@@ -46,7 +46,11 @@ import com.pson.myalarm.data.model.AlarmWithWeeklySchedules
 import com.pson.myalarm.data.model.DateOfWeek
 import com.pson.myalarm.ui.shared.DayCircle
 import kotlinx.coroutines.delay
+import java.time.DayOfWeek
+import java.time.Duration
+import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.time.temporal.TemporalAdjusters
 
 @Composable
 internal fun AlarmListScreen(
@@ -218,7 +222,7 @@ internal fun AlarmItem(
                         imageVector = Icons.Outlined.Notifications,
                         contentDescription = "Notification"
                     )
-                    Text("in 20 hours, 30 minutes")
+                    Text(item.getNextTriggerTimeDescription(), style = MaterialTheme.typography.labelMedium)
                 }
                 Text(item.alarm.note ?: "Untitled")
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -234,4 +238,51 @@ internal fun AlarmItem(
             Switch(item.alarm.isActive, onCheckedChange = { onToggleAlarm(item) })
         }
     }
+}
+
+internal fun AlarmWithWeeklySchedules.getNextTriggerTimeDescription(): String {
+    val now = LocalDateTime.now()
+    val currentTime = now.toLocalTime()
+    val currentDay = now.dayOfWeek.value
+
+    val eligibleSchedules = weeklySchedules
+        .filter { schedule ->
+            val scheduleDay = schedule.dateOfWeek.toCalendarDay()
+            val isEligibleToday = scheduleDay == currentDay && alarm.alarmTime > currentTime
+            val isEligibleFutureDay = scheduleDay > currentDay
+            isEligibleToday || isEligibleFutureDay
+        }
+        .sortedBy { schedule ->
+            val scheduleDay = schedule.dateOfWeek.toCalendarDay()
+            val daysUntil = (scheduleDay - currentDay + 7) % 7
+            daysUntil
+        }
+
+    val nextSchedule = eligibleSchedules.firstOrNull()
+        ?: weeklySchedules.minByOrNull { schedule ->
+            schedule.dateOfWeek.toCalendarDay()
+        }
+
+    nextSchedule?.let { schedule ->
+        val nextTriggerDateTime = now.with(
+            TemporalAdjusters.nextOrSame(
+                DayOfWeek.of(schedule.dateOfWeek.toCalendarDay())
+            )
+        ).with(alarm.alarmTime)
+
+
+        val duration = Duration.between(now, nextTriggerDateTime)
+        val days = duration.toDays()
+        val hours = duration.toHours() % 24
+        val minutes = duration.toMinutes() % 60
+
+        // Build the description
+        return buildString {
+            append("in ")
+            if (days > 0) append("$days days, ")
+            if (hours > 0) append("$hours hours, ")
+            append("$minutes minutes")
+        }
+    }
+    return "No scheduled alarm"
 }
