@@ -24,63 +24,63 @@ class AlarmScheduler(
     override fun schedule(item: AlarmWithWeeklySchedules) {
         val alarmTime = item.alarm.alarmTime
 
-        // Schedule for each selected day of week
-        item.weeklySchedules.forEach { schedule ->
-            val calendar = Calendar.getInstance().apply {
-                timeInMillis = System.currentTimeMillis()
-                set(Calendar.HOUR_OF_DAY, alarmTime.hour)
-                set(Calendar.MINUTE, alarmTime.minute)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-                // Adjust to next occurrence of this day of week
-                while (get(Calendar.DAY_OF_WEEK) != schedule.dateOfWeek.toCalendarDay()) {
+        // Schedule the alarm for the nearest time in the future
+        val calendar = Calendar.getInstance().apply {
+            timeInMillis = System.currentTimeMillis()
+            set(Calendar.HOUR_OF_DAY, alarmTime.hour)
+            set(Calendar.MINUTE, alarmTime.minute)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+
+            if (item.weeklySchedules.isEmpty()) {
+                // No repeat days: Set to the nearest future time
+                if (timeInMillis <= System.currentTimeMillis()) {
                     add(Calendar.DAY_OF_MONTH, 1)
                 }
-                // If the calculated time is in the past, move to next week
-                if (timeInMillis <= System.currentTimeMillis()) {
-                    add(Calendar.WEEK_OF_YEAR, 1)
+            } else {
+                // Repeat days specified: Find the next valid day
+                // Moves forward in time until match one in repeat dates
+                while (!item.weeklySchedules.any { schedule ->
+                        get(Calendar.DAY_OF_WEEK) == schedule.dateOfWeek.toCalendarDay()
+                    }) {
+                    add(Calendar.DAY_OF_MONTH, 1)
                 }
             }
+        }
 
-            val pendingIntent = PendingIntent.getBroadcast(
-                context,
-                generateRequestCode(item.alarm.id, schedule.dateOfWeek.ordinal),
-                generateIntent(item),
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            item.alarm.id.hashCode(),
+            generateIntent(item),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                if (alarmManager.canScheduleExactAlarms()) {
-                    alarmManager.setExactAndAllowWhileIdle(
-                        AlarmManager.RTC_WAKEUP,
-                        calendar.timeInMillis,
-                        pendingIntent
-                    )
-                }
-            } else {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (alarmManager.canScheduleExactAlarms()) {
                 alarmManager.setExactAndAllowWhileIdle(
                     AlarmManager.RTC_WAKEUP,
                     calendar.timeInMillis,
                     pendingIntent
                 )
             }
+        } else {
+            alarmManager.setExactAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                calendar.timeInMillis,
+                pendingIntent
+            )
         }
+
     }
 
     override fun cancel(item: AlarmWithWeeklySchedules) {
-        item.weeklySchedules.forEach { schedule ->
-            val pendingIntent = PendingIntent.getBroadcast(
-                context,
-                generateRequestCode(item.alarm.id, schedule.dateOfWeek.ordinal),
-                generateIntent(item),
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            pendingIntent?.let { alarmManager.cancel(it) }
-        }
-    }
-
-    private fun generateRequestCode(alarmId: Long, dayOfWeek: Int): Int {
-        return (alarmId.toString() + dayOfWeek.toString()).hashCode()
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            item.alarm.id.hashCode(),
+            generateIntent(item),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        pendingIntent?.let { alarmManager.cancel(it) }
     }
 
     private fun generateIntent(item: AlarmWithWeeklySchedules) =

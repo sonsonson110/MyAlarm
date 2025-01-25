@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -177,8 +178,24 @@ internal fun AlarmItem(
     onHighlightComplete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val timeFormatter = DateTimeFormatter.ofPattern("hh:mm a")
     var showHighlight by remember { mutableStateOf(isHighlighted) }
+    var currentDescription by remember { mutableStateOf(item.getNextTriggerTimeDescription()) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            currentDescription = item.getNextTriggerTimeDescription()
+
+            // Calculate the delay to the start of the next minute
+            val currentTimeMillis = System.currentTimeMillis()
+            val nextMinuteMillis = ((currentTimeMillis / 60000L) + 1) * 60000L
+            val delayMillis = nextMinuteMillis - currentTimeMillis
+            delay(delayMillis) // Delay until the start of the next minute
+        }
+    }
+
+    LaunchedEffect(isHighlighted) {
+        currentDescription = item.getNextTriggerTimeDescription()
+    }
 
     if (showHighlight) {
         LaunchedEffect(Unit) {
@@ -213,7 +230,27 @@ internal fun AlarmItem(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column {
-                Text(item.alarm.alarmTime.format(timeFormatter))
+                Row(
+                    verticalAlignment = Alignment.Bottom,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    val timePart =
+                        item.alarm.alarmTime.format(DateTimeFormatter.ofPattern("hh:mm a"))
+                            .split(' ')
+                    Text(
+                        timePart[0],
+                        color = if (!item.alarm.isActive) MaterialTheme.colorScheme.outline else Color.Unspecified,
+                        style = MaterialTheme.typography.displayMedium,
+                        modifier = Modifier.alignByBaseline()
+                    )
+                    Text(
+                        timePart[1],
+                        color = if (!item.alarm.isActive) MaterialTheme.colorScheme.outline else Color.Unspecified,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.alignByBaseline()
+                    )
+                }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -222,9 +259,15 @@ internal fun AlarmItem(
                         imageVector = Icons.Outlined.Notifications,
                         contentDescription = "Notification"
                     )
-                    Text(item.getNextTriggerTimeDescription(), style = MaterialTheme.typography.labelMedium)
+                    Text(
+                        currentDescription,
+                        style = MaterialTheme.typography.labelMedium
+                    )
                 }
-                Text(item.alarm.note ?: "Untitled")
+                Text(
+                    item.alarm.note ?: "Untitled",
+                    color = if (!item.alarm.isActive) MaterialTheme.colorScheme.outline else Color.Unspecified
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     DateOfWeek.entries.forEach { day ->
                         DayCircle(
@@ -245,44 +288,58 @@ internal fun AlarmWithWeeklySchedules.getNextTriggerTimeDescription(): String {
     val currentTime = now.toLocalTime()
     val currentDay = now.dayOfWeek.value
 
-    val eligibleSchedules = weeklySchedules
-        .filter { schedule ->
-            val scheduleDay = schedule.dateOfWeek.toCalendarDay()
-            val isEligibleToday = scheduleDay == currentDay && alarm.alarmTime > currentTime
-            val isEligibleFutureDay = scheduleDay > currentDay
-            isEligibleToday || isEligibleFutureDay
-        }
-        .sortedBy { schedule ->
-            val scheduleDay = schedule.dateOfWeek.toCalendarDay()
-            val daysUntil = (scheduleDay - currentDay + 7) % 7
-            daysUntil
+    // If no repeat dates are specified, create a fallback schedule for today or tomorrow
+    if (weeklySchedules.isEmpty()) {
+        val timeDifference = if (alarm.alarmTime.isBefore(currentTime)) {
+            // Add a full day to the second time to handle spanning midnight
+            Duration.between(currentTime, alarm.alarmTime).plusDays(1)
+        } else {
+            Duration.between(currentTime, alarm.alarmTime)
         }
 
-    val nextSchedule = eligibleSchedules.firstOrNull()
-        ?: weeklySchedules.minByOrNull { schedule ->
-            schedule.dateOfWeek.toCalendarDay()
-        }
-
-    nextSchedule?.let { schedule ->
-        val nextTriggerDateTime = now.with(
-            TemporalAdjusters.nextOrSame(
-                DayOfWeek.of(schedule.dateOfWeek.toCalendarDay())
-            )
-        ).with(alarm.alarmTime)
-
-
-        val duration = Duration.between(now, nextTriggerDateTime)
-        val days = duration.toDays()
-        val hours = duration.toHours() % 24
-        val minutes = duration.toMinutes() % 60
+        val hours = timeDifference.toHours()
+        val minutes = timeDifference.toMinutes() - hours * 60
 
         // Build the description
         return buildString {
             append("in ")
-            if (days > 0) append("$days days, ")
             if (hours > 0) append("$hours hours, ")
-            append("$minutes minutes")
+            if (minutes > 0) append("$minutes minutes")
         }
     }
-    return "No scheduled alarm"
+
+    // Find the next valid schedule
+    val nextSchedule = weeklySchedules.minBy { schedule ->
+        val scheduleDay = schedule.dateOfWeek.toCalendarDay()
+        val isToday = scheduleDay == currentDay
+        val timeOffset = if (isToday && alarm.alarmTime > currentTime) {
+            // Alarm is later today
+            Duration.between(currentTime, alarm.alarmTime).toMinutes()
+        } else {
+            // Calculate days until the next valid day
+            val daysUntil = (scheduleDay - currentDay + 7) % 7
+            Duration.ofDays(daysUntil.toLong()).toMinutes() +
+                    if (daysUntil == 0) 0 else alarm.alarmTime.toSecondOfDay() / 60L
+        }
+        timeOffset
+    }
+
+    val nextTriggerDateTime = now.with(
+        TemporalAdjusters.nextOrSame(
+            DayOfWeek.of(nextSchedule.dateOfWeek.toCalendarDay())
+        )
+    ).with(alarm.alarmTime)
+
+    val duration = Duration.between(now, nextTriggerDateTime)
+    val days = duration.toDays()
+    val hours = duration.toHours() % 24
+    val minutes = duration.toMinutes() % 60
+
+    // Build the description
+    return buildString {
+        append("in ")
+        if (days > 0) append("$days days, ")
+        if (hours > 0) append("$hours hours, ")
+        append("$minutes minutes")
+    }
 }
