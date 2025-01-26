@@ -1,7 +1,11 @@
 package com.pson.myalarm.ui.screens.alarm_list
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,17 +21,24 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TriStateCheckbox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -39,8 +50,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pson.myalarm.data.model.AlarmWithWeeklySchedules
@@ -53,6 +66,7 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.TemporalAdjusters
 
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 internal fun AlarmListScreen(
     modifier: Modifier = Modifier,
@@ -62,9 +76,59 @@ internal fun AlarmListScreen(
     viewModel: AlarmListViewModel = viewModel(factory = AlarmListViewModel.Factory),
 ) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle()
+    val isDeleting = (uiState.value as? AlarmListUiState.Success)?.isDeleting ?: false
 
     Scaffold(
         modifier = modifier,
+        topBar = {
+            val state = (uiState.value as? AlarmListUiState.Success)
+            if (state != null && state.selectingMode) {
+                TopAppBar(
+                    title = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            val triStateCheckBoxState = when {
+                                state.selectedItems.size == state.alarmsWithWeeklySchedules.size -> ToggleableState.On
+                                state.selectedItems.isEmpty() -> ToggleableState.Off
+                                else -> ToggleableState.Indeterminate
+                            }
+                            TriStateCheckbox(
+                                state = triStateCheckBoxState,
+                                onClick = viewModel::onTriStateCheckboxSelect,
+                                enabled = !isDeleting
+                            )
+                            Text("${state.selectedItems.size} selected")
+                        }
+                    },
+                    actions = {
+                        IconButton(
+                            onClick = viewModel::bulkDelete,
+                            enabled = !isDeleting && state.selectedItems.any()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Delete,
+                                contentDescription = "Bulk delete",
+                                tint = if (!isDeleting && state.selectedItems.any())
+                                    Color.Red.copy(alpha = 0.8f)
+                                else
+                                    Color.Gray.copy(alpha = 0.5f)
+                            )
+                        }
+                        IconButton(
+                            onClick = viewModel::toggleSelectingMode,
+                            enabled = !isDeleting
+                        ) {
+                            Icon(
+                                Icons.Filled.Close, "Cancel selecting mode",
+                                tint = if (isDeleting)
+                                    Color.Gray.copy(alpha = 0.5f)
+                                else
+                                    MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                )
+            }
+        },
         floatingActionButton = {
             // Show FAB only for Success or Empty states
             if (uiState.value is AlarmListUiState.Success ||
@@ -81,8 +145,8 @@ internal fun AlarmListScreen(
     ) { paddingValues ->
         when (uiState.value) {
             is AlarmListUiState.Success -> {
-                val alarmsWithWeeklySchedules =
-                    (uiState.value as AlarmListUiState.Success).alarmsWithWeeklySchedules
+                val state = uiState.value as AlarmListUiState.Success
+                val alarmsWithWeeklySchedules = state.alarmsWithWeeklySchedules
                 val scrollState = rememberLazyListState()
 
                 LaunchedEffect(recentSavedAlarmId) {
@@ -107,16 +171,48 @@ internal fun AlarmListScreen(
                         val isHighlighted = recentSavedAlarmId == item.alarm.id
                         AlarmItem(
                             item = item,
+                            isSelected = state.selectedItems.contains(item.alarm.id),
+                            selectingMode = state.selectingMode,
                             isHighlighted = isHighlighted,
                             onHighlightComplete = resetRecentSavedAlarmId,
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .padding(8.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .clickable { onEditAlarm(item.alarm.id) },
-                            onToggleAlarm = viewModel::toggleAlarm
+                                .combinedClickable(
+                                    onClick = {
+                                        if (state.selectingMode) {
+                                            viewModel.onItemSelect(item.alarm.id)
+                                        } else {
+                                            onEditAlarm(item.alarm.id)
+                                        }
+                                    },
+                                    onLongClick = {
+                                        if (!state.selectingMode) {
+                                            viewModel.toggleSelectingMode()
+                                            viewModel.onItemSelect(item.alarm.id)
+                                        }
+                                    }
+                                ),
+                            onToggleAlarm = viewModel::toggleAlarm,
                         )
                     }
                     item { Spacer(Modifier.height(16.dp)) }
+                }
+
+                // Overlay when deleting
+
+                if (isDeleting) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.5f))
+                            .clickable(indication = null, // disable ripple effect
+                                interactionSource = remember { MutableInteractionSource() },
+                                onClick = { }), contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
                 }
             }
 
@@ -176,6 +272,8 @@ internal fun AlarmItem(
     onToggleAlarm: (AlarmWithWeeklySchedules) -> Unit,
     isHighlighted: Boolean,
     onHighlightComplete: () -> Unit,
+    isSelected: Boolean,
+    selectingMode: Boolean,
     modifier: Modifier = Modifier
 ) {
     var showHighlight by remember { mutableStateOf(isHighlighted) }
@@ -215,11 +313,9 @@ internal fun AlarmItem(
             color = if (showHighlight) Color.LightGray else Color.Transparent
         ),
         modifier = modifier
-            .padding(8.dp)
             .graphicsLayer {
                 if (showHighlight) {
                     shadowElevation = 12.dp.toPx()
-                    translationY = -4.dp.toPx()
                 }
             }
     ) {
@@ -227,8 +323,17 @@ internal fun AlarmItem(
             modifier = Modifier
                 .padding(8.dp)
                 .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = if (selectingMode) Arrangement.SpaceEvenly else Arrangement.SpaceBetween
         ) {
+            if (selectingMode) {
+                Checkbox(
+                    checked = isSelected,
+                    onCheckedChange = null,
+                    modifier = Modifier
+                        .align(Alignment.CenterVertically)
+                        .zIndex(-1f)
+                )
+            }
             Column {
                 Row(
                     verticalAlignment = Alignment.Bottom,
@@ -278,7 +383,8 @@ internal fun AlarmItem(
                     }
                 }
             }
-            Switch(item.alarm.isActive, onCheckedChange = { onToggleAlarm(item) })
+            if (!selectingMode)
+                Switch(item.alarm.isActive, onCheckedChange = { onToggleAlarm(item) })
         }
     }
 }

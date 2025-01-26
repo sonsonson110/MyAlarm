@@ -23,7 +23,7 @@ class AlarmRepository(private val alarmDao: AlarmDao) : IAlarmRepository {
     }
 
     override suspend fun deleteAlarms(alarmIds: List<Long>) {
-        TODO("Not yet implemented")
+        return alarmDao.deleteAlarms(alarmIds)
     }
 
     override suspend fun toggleAlarmActivation(alarmId: Long) {

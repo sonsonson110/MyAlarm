@@ -73,7 +73,7 @@ internal fun AlarmEditScreen(
     val uiState = viewModel.uiState.collectAsStateWithLifecycle()
     val isBusyPersisting = (uiState.value as? AlarmEditUiState.Success)?.let {
         it.isSaving || it.isDeleting
-    } ?: true
+    } ?: false
 
     // Collect snackbar message
     LaunchedEffect(Unit) {
@@ -103,7 +103,7 @@ internal fun AlarmEditScreen(
                     Icon(
                         Icons.Outlined.Delete,
                         "Delete",
-                        tint = if (!isBusyPersisting) Color.Red else Color.Gray.copy(alpha = 0.5f)
+                        tint = if (!isBusyPersisting) Color.Red.copy(0.8f) else Color.Gray.copy(alpha = 0.5f)
                     )
                 }
             }

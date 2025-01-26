@@ -29,6 +29,9 @@ interface AlarmDao {
     @Query("DELETE FROM alarms WHERE id = :alarmId")
     suspend fun deleteAlarm(alarmId: Long)
 
+    @Query("DELETE FROM alarms WHERE id in (:alarmIds)")
+    suspend fun deleteAlarms(alarmIds: List<Long>)
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAlarmWeeklySchedules(weeklySchedules: List<WeeklySchedule>)
 
