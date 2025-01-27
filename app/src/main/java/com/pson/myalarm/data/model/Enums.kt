@@ -2,7 +2,7 @@ package com.pson.myalarm.data.model
 
 import java.util.Calendar
 
-enum class DateOfWeek {
+enum class DayOfWeek {
 
     MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY;
 

@@ -11,7 +11,7 @@ import com.pson.myalarm.MyAlarmApplication
 import com.pson.myalarm.core.alarm.AlarmScheduler
 import com.pson.myalarm.data.model.Alarm
 import com.pson.myalarm.data.model.AlarmWithWeeklySchedules
-import com.pson.myalarm.data.model.DateOfWeek
+import com.pson.myalarm.data.model.DayOfWeek
 import com.pson.myalarm.data.model.WeeklySchedule
 import com.pson.myalarm.data.repository.AlarmRepository
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -44,14 +44,14 @@ class AlarmEditViewModel(
 
     fun onUiStateChange(state: AlarmEditUiState.Success) = _uiState.update { state }
 
-    fun onRepeatDatesChange(selectedDate: DateOfWeek) {
+    fun onRepeatDaysChange(selectedDay: DayOfWeek) {
         val state = _uiState.value as AlarmEditUiState.Success
-        var currentDates = state.repeatDates
-        currentDates = if (currentDates.contains(selectedDate))
-            currentDates.minus(selectedDate)
+        var currentDays = state.repeatDays
+        currentDays = if (currentDays.contains(selectedDay))
+            currentDays.minus(selectedDay)
         else
-            currentDates.plus(selectedDate)
-        onUiStateChange(state.copy(repeatDates = currentDates))
+            currentDays.plus(selectedDay)
+        onUiStateChange(state.copy(repeatDays = currentDays))
     }
 
     private fun loadAlarm() {
@@ -67,7 +67,7 @@ class AlarmEditViewModel(
                             alarmTime = item.alarm.alarmTime,
                             note = item.alarm.note ?: "",
                             snoozeOption = SnoozeOption.fromMinutes(item.alarm.snoozeTimeMinutes),
-                            repeatDates = item.weeklySchedules.map { it.dateOfWeek }.toSet(),
+                            repeatDays = item.weeklySchedules.map { it.dayOfWeek }.toSet(),
                             isActive = item.alarm.isActive
                         )
                     }
@@ -145,7 +145,7 @@ sealed interface AlarmEditUiState {
         val alarmTime: LocalTime = LocalTime.now().plusMinutes(15),
         val note: String = "",
         val snoozeOption: SnoozeOption = SnoozeOption.Disabled,
-        val repeatDates: Set<DateOfWeek> = emptySet(),
+        val repeatDays: Set<DayOfWeek> = emptySet(),
         val isActive: Boolean = true,
         // ui flag
         val isSaving: Boolean = false,
@@ -159,8 +159,8 @@ sealed interface AlarmEditUiState {
                 snoozeTimeMinutes = snoozeOption.minutes,
                 isActive = isActive
             ),
-            weeklySchedules = repeatDates.map {
-                WeeklySchedule(dateOfWeek = it)
+            weeklySchedules = repeatDays.map {
+                WeeklySchedule(dayOfWeek = it)
             }
         )
     }

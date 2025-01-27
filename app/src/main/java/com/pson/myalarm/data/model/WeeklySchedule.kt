@@ -18,5 +18,5 @@ import androidx.room.PrimaryKey
 data class WeeklySchedule(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val alarmId: Long = 0,
-    val dateOfWeek: DateOfWeek,
+    val dayOfWeek: DayOfWeek,
 )

@@ -57,7 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pson.myalarm.R
-import com.pson.myalarm.data.model.DateOfWeek
+import com.pson.myalarm.data.model.DayOfWeek
 import com.pson.myalarm.ui.shared.DayCircle
 import java.time.LocalTime
 
@@ -189,30 +189,30 @@ internal fun AlarmEditScreen(
                         )
                     }
 
-                    // Recurrent dates of week
-                    val dateOfWeekEntries = DateOfWeek.entries
+                    // Recurrent days of week
+                    val dayOfWeekEntries = DayOfWeek.entries
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Checkbox(checked = state.repeatDates.isNotEmpty(), onCheckedChange = {
-                            if (state.repeatDates.isNotEmpty()) viewModel.onUiStateChange(
+                        Checkbox(checked = state.repeatDays.isNotEmpty(), onCheckedChange = {
+                            if (state.repeatDays.isNotEmpty()) viewModel.onUiStateChange(
                                 state.copy(
-                                    repeatDates = emptySet()
+                                    repeatDays = emptySet()
                                 )
                             )
-                            else viewModel.onUiStateChange(state.copy(repeatDates = dateOfWeekEntries.toSet()))
+                            else viewModel.onUiStateChange(state.copy(repeatDays = dayOfWeekEntries.toSet()))
                         })
                         Text("Repeat alarm")
                     }
                     Row(
                         modifier = modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        dateOfWeekEntries.forEach { day ->
+                        dayOfWeekEntries.forEach { day ->
                             DayCircle(
                                 text = day.abbreviation,
-                                isSelected = state.repeatDates.contains(day),
+                                isSelected = state.repeatDays.contains(day),
                                 onClick = {
-                                    viewModel.onRepeatDatesChange(day)
+                                    viewModel.onRepeatDaysChange(day)
                                 },
                                 modifier = Modifier.size(36.dp)
                             )

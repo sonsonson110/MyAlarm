@@ -57,10 +57,8 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pson.myalarm.data.model.AlarmWithWeeklySchedules
-import com.pson.myalarm.data.model.DateOfWeek
 import com.pson.myalarm.ui.shared.DayCircle
 import kotlinx.coroutines.delay
-import java.time.DayOfWeek
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -374,10 +372,10 @@ internal fun AlarmItem(
                     color = if (!item.alarm.isActive) MaterialTheme.colorScheme.outline else Color.Unspecified
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    DateOfWeek.entries.forEach { day ->
+                    com.pson.myalarm.data.model.DayOfWeek.entries.forEach { day ->
                         DayCircle(
                             day.abbreviation,
-                            item.weeklySchedules.any { it.dateOfWeek == day },
+                            item.weeklySchedules.any { it.dayOfWeek == day },
                             modifier = Modifier.size(28.dp)
                         )
                     }
@@ -394,7 +392,7 @@ internal fun AlarmWithWeeklySchedules.getNextTriggerTimeDescription(): String {
     val currentTime = now.toLocalTime()
     val currentDay = now.dayOfWeek.value
 
-    // If no repeat dates are specified, create a fallback schedule for today or tomorrow
+    // If no repeat days are specified, create a fallback schedule for today or tomorrow
     if (weeklySchedules.isEmpty()) {
         val timeDifference = if (alarm.alarmTime.isBefore(currentTime)) {
             // Add a full day to the second time to handle spanning midnight
@@ -416,7 +414,7 @@ internal fun AlarmWithWeeklySchedules.getNextTriggerTimeDescription(): String {
 
     // Find the next valid schedule
     val nextSchedule = weeklySchedules.minBy { schedule ->
-        val scheduleDay = schedule.dateOfWeek.toCalendarDay()
+        val scheduleDay = schedule.dayOfWeek.toCalendarDay()
         val isToday = scheduleDay == currentDay
         val timeOffset = if (isToday && alarm.alarmTime > currentTime) {
             // Alarm is later today
@@ -430,13 +428,13 @@ internal fun AlarmWithWeeklySchedules.getNextTriggerTimeDescription(): String {
         timeOffset
     }
 
-    val nextTriggerDateTime = now.with(
+    val nextTriggerDayTime = now.with(
         TemporalAdjusters.nextOrSame(
-            DayOfWeek.of(nextSchedule.dateOfWeek.toCalendarDay())
+            java.time.DayOfWeek.of(nextSchedule.dayOfWeek.toCalendarDay())
         )
     ).with(alarm.alarmTime)
 
-    val duration = Duration.between(now, nextTriggerDateTime)
+    val duration = Duration.between(now, nextTriggerDayTime)
     val days = duration.toDays()
     val hours = duration.toHours() % 24
     val minutes = duration.toMinutes() % 60

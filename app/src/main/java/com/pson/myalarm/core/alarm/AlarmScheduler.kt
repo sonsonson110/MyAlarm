@@ -41,7 +41,7 @@ class AlarmScheduler(
                 // Repeat days specified: Find the next valid day
                 // Moves forward in time until match one in repeat dates
                 while (!item.weeklySchedules.any { schedule ->
-                        get(Calendar.DAY_OF_WEEK) == schedule.dateOfWeek.toCalendarDay()
+                        get(Calendar.DAY_OF_WEEK) == schedule.dayOfWeek.toCalendarDay()
                     }) {
                     add(Calendar.DAY_OF_MONTH, 1)
                 }
