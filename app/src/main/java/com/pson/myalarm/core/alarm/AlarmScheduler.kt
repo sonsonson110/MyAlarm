@@ -45,6 +45,10 @@ class AlarmScheduler(
                     }) {
                     add(Calendar.DAY_OF_MONTH, 1)
                 }
+                // For special case where same DOW *BUT* alarm time is before current time
+                if (timeInMillis <= System.currentTimeMillis()) {
+                    add(Calendar.DAY_OF_MONTH, 7)
+                }
             }
         }
 

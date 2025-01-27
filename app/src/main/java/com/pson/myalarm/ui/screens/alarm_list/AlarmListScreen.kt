@@ -59,10 +59,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pson.myalarm.data.model.AlarmWithWeeklySchedules
 import com.pson.myalarm.ui.shared.DayCircle
 import kotlinx.coroutines.delay
-import java.time.Duration
-import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.time.temporal.TemporalAdjusters
+import java.util.Calendar
+import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -388,56 +387,39 @@ internal fun AlarmItem(
 }
 
 internal fun AlarmWithWeeklySchedules.getNextTriggerTimeDescription(): String {
-    val now = LocalDateTime.now()
-    val currentTime = now.toLocalTime()
-    val currentDay = now.dayOfWeek.value
+    // Find the next valid schedule (this should be the same with AlarmScheduler::schedule)
+    val alarmTime = alarm.alarmTime
+    val calendar = Calendar.getInstance().apply {
+        timeInMillis = System.currentTimeMillis()
+        set(Calendar.HOUR_OF_DAY, alarmTime.hour)
+        set(Calendar.MINUTE, alarmTime.minute)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
 
-    // If no repeat days are specified, create a fallback schedule for today or tomorrow
-    if (weeklySchedules.isEmpty()) {
-        val timeDifference = if (alarm.alarmTime.isBefore(currentTime)) {
-            // Add a full day to the second time to handle spanning midnight
-            Duration.between(currentTime, alarm.alarmTime).plusDays(1)
+        if (weeklySchedules.isEmpty()) {
+            // No repeat days: Set to the nearest future time
+            if (timeInMillis <= System.currentTimeMillis()) {
+                add(Calendar.DAY_OF_MONTH, 1)
+            }
         } else {
-            Duration.between(currentTime, alarm.alarmTime)
-        }
-
-        val hours = timeDifference.toHours()
-        val minutes = timeDifference.toMinutes() - hours * 60
-
-        // Build the description
-        return buildString {
-            append("in ")
-            if (hours > 0) append("$hours hours, ")
-            if (minutes > 0) append("$minutes minutes")
+            // Repeat days specified: Find the next valid day
+            // Moves forward in time until match one in repeat dates
+            while (!weeklySchedules.any { schedule ->
+                    get(Calendar.DAY_OF_WEEK) == schedule.dayOfWeek.toCalendarDay()
+                }) {
+                add(Calendar.DAY_OF_MONTH, 1)
+            }
+            // For special case where same DOW *BUT* alarm time is before current time
+            if (timeInMillis <= System.currentTimeMillis()) {
+                add(Calendar.DAY_OF_MONTH, 7)
+            }
         }
     }
 
-    // Find the next valid schedule
-    val nextSchedule = weeklySchedules.minBy { schedule ->
-        val scheduleDay = schedule.dayOfWeek.toCalendarDay()
-        val isToday = scheduleDay == currentDay
-        val timeOffset = if (isToday && alarm.alarmTime > currentTime) {
-            // Alarm is later today
-            Duration.between(currentTime, alarm.alarmTime).toMinutes()
-        } else {
-            // Calculate days until the next valid day
-            val daysUntil = (scheduleDay - currentDay + 7) % 7
-            Duration.ofDays(daysUntil.toLong()).toMinutes() +
-                    if (daysUntil == 0) 0 else alarm.alarmTime.toSecondOfDay() / 60L
-        }
-        timeOffset
-    }
-
-    val nextTriggerDayTime = now.with(
-        TemporalAdjusters.nextOrSame(
-            java.time.DayOfWeek.of(nextSchedule.dayOfWeek.toCalendarDay())
-        )
-    ).with(alarm.alarmTime)
-
-    val duration = Duration.between(now, nextTriggerDayTime)
-    val days = duration.toDays()
-    val hours = duration.toHours() % 24
-    val minutes = duration.toMinutes() % 60
+    val duration = calendar.timeInMillis - System.currentTimeMillis()
+    val days = TimeUnit.MILLISECONDS.toDays(duration)
+    val hours = TimeUnit.MILLISECONDS.toHours(duration) % 24
+    val minutes = TimeUnit.MILLISECONDS.toMinutes(duration) % 60
 
     // Build the description
     return buildString {
