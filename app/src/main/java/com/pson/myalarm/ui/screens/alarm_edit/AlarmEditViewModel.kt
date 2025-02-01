@@ -2,18 +2,13 @@ package com.pson.myalarm.ui.screens.alarm_edit
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
-import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.CreationExtras
-import com.pson.myalarm.MyAlarmApplication
 import com.pson.myalarm.core.alarm.AlarmScheduler
 import com.pson.myalarm.data.model.Alarm
 import com.pson.myalarm.data.model.AlarmWithWeeklySchedules
 import com.pson.myalarm.data.model.DayOfWeek
 import com.pson.myalarm.data.model.WeeklySchedule
-import com.pson.myalarm.data.repository.AlarmRepository
+import com.pson.myalarm.data.repository.IAlarmRepository
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -25,7 +20,7 @@ import kotlinx.coroutines.launch
 import java.time.LocalTime
 
 class AlarmEditViewModel(
-    private val alarmRepository: AlarmRepository,
+    private val alarmRepository: IAlarmRepository,
     private val alarmScheduler: AlarmScheduler,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -116,27 +111,6 @@ class AlarmEditViewModel(
             }
         }
     }
-
-    companion object {
-        val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
-            @Suppress("UNCHECKED_CAST")
-            override fun <T : ViewModel> create(
-                modelClass: Class<T>,
-                extras: CreationExtras
-            ): T {
-                // Get the Application object from extras
-                val application = checkNotNull(extras[APPLICATION_KEY]) as MyAlarmApplication
-                // Create a SavedStateHandle for this ViewModel from extras
-                val savedStateHandle = extras.createSavedStateHandle()
-
-                return AlarmEditViewModel(
-                    application.alarmRepository,
-                    application.alarmScheduler,
-                    savedStateHandle
-                ) as T
-            }
-        }
-    }
 }
 
 sealed interface AlarmEditUiState {
@@ -181,7 +155,7 @@ sealed class SnoozeOption(val minutes: Int?, val displayText: String) {
     companion object {
         val options = listOf(Disabled, FiveMin, TenMin, TwentyMin, ThirtyMin, OneHour)
 
-        fun fromMinutes(minutes: Int?): SnoozeOption {
+        fun fromMinutes(minutes: Int? = null): SnoozeOption {
             if (minutes == null) return Disabled
             return options.find { it.minutes == minutes } ?: Disabled
         }

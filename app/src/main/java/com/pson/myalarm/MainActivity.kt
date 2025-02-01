@@ -79,7 +79,7 @@ internal fun BottomNavigationBar(navController: NavHostController) {
             ImageVector.vectorResource(R.drawable.outline_hourglass_24)
         )
     )
-    NavigationBar {
+    NavigationBar() {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentDestination = navBackStackEntry?.destination
         topLevelRoutes.forEach { topLevelRoute ->

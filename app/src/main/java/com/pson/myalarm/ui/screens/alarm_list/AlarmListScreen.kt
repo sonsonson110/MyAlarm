@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.pson.myalarm.MyAlarmApplication
 import com.pson.myalarm.data.model.AlarmWithWeeklySchedules
 import com.pson.myalarm.ui.shared.DayCircle
 import kotlinx.coroutines.delay
@@ -70,7 +71,7 @@ internal fun AlarmListScreen(
     onEditAlarm: (Long?) -> Unit,
     recentSavedAlarmId: Long,
     resetRecentSavedAlarmId: () -> Unit,
-    viewModel: AlarmListViewModel = viewModel(factory = AlarmListViewModel.Factory),
+    viewModel: AlarmListViewModel = viewModel<AlarmListViewModel>(factory = MyAlarmApplication.appModule.viewModelFactory),
 ) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle()
     val isDeleting = (uiState.value as? AlarmListUiState.Success)?.isDeleting ?: false
