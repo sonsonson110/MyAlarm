@@ -57,11 +57,12 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pson.myalarm.MyAlarmApplication
+import com.pson.myalarm.core.alarm.AlarmScheduler
 import com.pson.myalarm.data.model.AlarmWithWeeklySchedules
 import com.pson.myalarm.ui.shared.DayCircle
+import com.pson.myalarm.util.TimeHelper
 import kotlinx.coroutines.delay
 import java.time.format.DateTimeFormatter
-import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
@@ -282,7 +283,7 @@ internal fun AlarmItem(
             currentDescription = item.getNextTriggerTimeDescription()
 
             // Calculate the delay to the start of the next minute
-            val currentTimeMillis = System.currentTimeMillis()
+            val currentTimeMillis = TimeHelper.nowInMillis()
             val nextMinuteMillis = ((currentTimeMillis / 60000L) + 1) * 60000L
             val delayMillis = nextMinuteMillis - currentTimeMillis
             delay(delayMillis) // Delay until the start of the next minute
@@ -389,35 +390,11 @@ internal fun AlarmItem(
 
 internal fun AlarmWithWeeklySchedules.getNextTriggerTimeDescription(): String {
     // Find the next valid schedule (this should be the same with AlarmScheduler::schedule)
-    val alarmTime = alarm.alarmTime
-    val calendar = Calendar.getInstance().apply {
-        timeInMillis = System.currentTimeMillis()
-        set(Calendar.HOUR_OF_DAY, alarmTime.hour)
-        set(Calendar.MINUTE, alarmTime.minute)
-        set(Calendar.SECOND, 0)
-        set(Calendar.MILLISECOND, 0)
+    val currentTime = TimeHelper.nowInMillis()
+    val futureScheduleTime = AlarmScheduler.getFutureScheduleTime(this)
 
-        if (weeklySchedules.isEmpty()) {
-            // No repeat days: Set to the nearest future time
-            if (timeInMillis <= System.currentTimeMillis()) {
-                add(Calendar.DAY_OF_MONTH, 1)
-            }
-        } else {
-            // Repeat days specified: Find the next valid day
-            // Moves forward in time until match one in repeat dates
-            while (!weeklySchedules.any { schedule ->
-                    get(Calendar.DAY_OF_WEEK) == schedule.dayOfWeek.toCalendarDay()
-                }) {
-                add(Calendar.DAY_OF_MONTH, 1)
-            }
-            // For special case where same DOW *BUT* alarm time is before current time
-            if (timeInMillis <= System.currentTimeMillis()) {
-                add(Calendar.DAY_OF_MONTH, 7)
-            }
-        }
-    }
 
-    val duration = calendar.timeInMillis - System.currentTimeMillis()
+    val duration = futureScheduleTime - currentTime
     val days = TimeUnit.MILLISECONDS.toDays(duration)
     val hours = TimeUnit.MILLISECONDS.toHours(duration) % 24
     val minutes = TimeUnit.MILLISECONDS.toMinutes(duration) % 60

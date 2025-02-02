@@ -7,6 +7,7 @@ import android.content.Intent
 import android.os.Build
 import com.pson.myalarm.core.receiver.AlarmReceiver
 import com.pson.myalarm.data.model.AlarmWithWeeklySchedules
+import com.pson.myalarm.util.TimeHelper
 import java.util.Calendar
 
 interface IAlarmScheduler {
@@ -22,35 +23,7 @@ class AlarmScheduler(
         context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
     override fun schedule(item: AlarmWithWeeklySchedules) {
-        val alarmTime = item.alarm.alarmTime
-
-        // Schedule the alarm for the nearest time in the future
-        val calendar = Calendar.getInstance().apply {
-            timeInMillis = System.currentTimeMillis()
-            set(Calendar.HOUR_OF_DAY, alarmTime.hour)
-            set(Calendar.MINUTE, alarmTime.minute)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-
-            if (item.weeklySchedules.isEmpty()) {
-                // No repeat days: Set to the nearest future time
-                if (timeInMillis <= System.currentTimeMillis()) {
-                    add(Calendar.DAY_OF_MONTH, 1)
-                }
-            } else {
-                // Repeat days specified: Find the next valid day
-                // Moves forward in time until match one in repeat dates
-                while (!item.weeklySchedules.any { schedule ->
-                        get(Calendar.DAY_OF_WEEK) == schedule.dayOfWeek.toCalendarDay()
-                    }) {
-                    add(Calendar.DAY_OF_MONTH, 1)
-                }
-                // For special case where same DOW *BUT* alarm time is before current time
-                if (timeInMillis <= System.currentTimeMillis()) {
-                    add(Calendar.DAY_OF_MONTH, 7)
-                }
-            }
-        }
+        val scheduleTime = getFutureScheduleTime(item)
 
         val pendingIntent = PendingIntent.getBroadcast(
             context,
@@ -63,14 +36,14 @@ class AlarmScheduler(
             if (alarmManager.canScheduleExactAlarms()) {
                 alarmManager.setExactAndAllowWhileIdle(
                     AlarmManager.RTC_WAKEUP,
-                    calendar.timeInMillis,
+                    scheduleTime,
                     pendingIntent
                 )
             }
         } else {
             alarmManager.setExactAndAllowWhileIdle(
                 AlarmManager.RTC_WAKEUP,
-                calendar.timeInMillis,
+                scheduleTime,
                 pendingIntent
             )
         }
@@ -93,4 +66,60 @@ class AlarmScheduler(
             putExtra("ALARM_ID", item.alarm.id)
             putExtra("ALARM_NOTE", item.alarm.note)
         }
+
+    companion object {
+        fun getFutureScheduleTime(item: AlarmWithWeeklySchedules): Long {
+            val currentTime = TimeHelper.nowInMillis()
+
+            // Schedule the alarm for the nearest time in the future
+            val calendar = Calendar.getInstance().apply {
+                timeInMillis = currentTime
+                item.alarm.alarmTime.let {
+                    set(Calendar.HOUR_OF_DAY, it.hour)
+                    set(Calendar.MINUTE, it.minute)
+                }
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+
+            // No repeat days: Set to the nearest future time
+            if (item.weeklySchedules.isEmpty()) {
+                if (calendar.timeInMillis <= currentTime) {
+                    calendar.add(Calendar.DAY_OF_MONTH, 1)
+                }
+                return calendar.timeInMillis
+            }
+
+            // For repeating alarm: find next valid day
+            val isCurrentDayMatched = item.weeklySchedules.any { schedule ->
+                calendar.get(Calendar.DAY_OF_WEEK) == schedule.dayOfWeek.toCalendarDay()
+            }
+
+            // If current day is not valid, find next valid day
+            if (!isCurrentDayMatched) {
+                do {
+                    calendar.add(Calendar.DAY_OF_MONTH, 1)
+                } while (!item.weeklySchedules.any { schedule ->
+                        calendar.get(Calendar.DAY_OF_WEEK) == schedule.dayOfWeek.toCalendarDay()
+                    })
+            }
+
+            // Handle case when time is in past
+            if (calendar.timeInMillis < currentTime) {
+                when (item.weeklySchedules.size) {
+                    // Single day repeat: jump to next week
+                    1 -> calendar.add(Calendar.DAY_OF_MONTH, 7)
+                    // Multiple days: find next valid day
+                    else -> {
+                        do {
+                            calendar.add(Calendar.DAY_OF_MONTH, 1)
+                        } while (!item.weeklySchedules.any { schedule ->
+                                calendar.get(Calendar.DAY_OF_WEEK) == schedule.dayOfWeek.toCalendarDay()
+                            })
+                    }
+                }
+            }
+            return calendar.timeInMillis
+        }
+    }
 }
