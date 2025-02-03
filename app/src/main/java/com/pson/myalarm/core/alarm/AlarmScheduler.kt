@@ -23,7 +23,8 @@ class AlarmScheduler(
         context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
     override fun schedule(item: AlarmWithWeeklySchedules) {
-        val scheduleTime = getFutureScheduleTime(item)
+//        val scheduleTime = getFutureScheduleTime(item)
+        val scheduleTime = System.currentTimeMillis() + 5000L
 
         val pendingIntent = PendingIntent.getBroadcast(
             context,
@@ -34,20 +35,17 @@ class AlarmScheduler(
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (alarmManager.canScheduleExactAlarms()) {
-                alarmManager.setExactAndAllowWhileIdle(
-                    AlarmManager.RTC_WAKEUP,
-                    scheduleTime,
+                alarmManager.setAlarmClock(
+                    AlarmManager.AlarmClockInfo(scheduleTime, pendingIntent),
                     pendingIntent
                 )
             }
         } else {
-            alarmManager.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                scheduleTime,
+            alarmManager.setAlarmClock(
+                AlarmManager.AlarmClockInfo(scheduleTime, pendingIntent),
                 pendingIntent
             )
         }
-
     }
 
     override fun cancel(item: AlarmWithWeeklySchedules) {
@@ -62,9 +60,7 @@ class AlarmScheduler(
 
     private fun generateIntent(item: AlarmWithWeeklySchedules) =
         Intent(this.context, AlarmReceiver::class.java).apply {
-            action = AlarmReceiver.RECEIVER_ACTION
             putExtra("ALARM_ID", item.alarm.id)
-            putExtra("ALARM_NOTE", item.alarm.note)
         }
 
     companion object {

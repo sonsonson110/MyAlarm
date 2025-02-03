@@ -237,8 +237,6 @@ internal fun AlarmEditScreen(
                     }
 
                     Spacer(Modifier.height(28.dp))
-
-                    Text(uiState.value.toString())
                 }
 
                 // Overlay when persisting
