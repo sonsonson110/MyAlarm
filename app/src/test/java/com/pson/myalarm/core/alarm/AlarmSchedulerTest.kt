@@ -1,6 +1,5 @@
-package com.pson.myalarm
+package com.pson.myalarm.core.alarm
 
-import com.pson.myalarm.core.alarm.AlarmScheduler
 import com.pson.myalarm.data.model.Alarm
 import com.pson.myalarm.data.model.AlarmWithWeeklySchedules
 import com.pson.myalarm.data.model.DayOfWeek
