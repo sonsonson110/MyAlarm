@@ -10,36 +10,69 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.pson.myalarm.AlarmDisplayActivity
+import com.pson.myalarm.MyAlarmApplication
 import com.pson.myalarm.R
+import com.pson.myalarm.data.model.AlarmWithWeeklySchedules
+import com.pson.myalarm.data.repository.IAlarmRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import java.time.format.DateTimeFormatter
 
 class AlarmService : Service() {
 
-    override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
-        val alarmId = intent.getLongExtra("ALARM_ID", -1)
+    private lateinit var alarmRepository: IAlarmRepository
+
+    override fun onCreate() {
+        super.onCreate()
+        alarmRepository = MyAlarmApplication.appModule.alarmRepository
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val alarmId = intent?.getLongExtra("ALARM_ID", -1) ?: return START_NOT_STICKY
+        if (alarmId == -1L) return START_NOT_STICKY
+
         ensureNotificationChannelExists()
-        startForeground(alarmId.hashCode(), getNotification(alarmId))
+
+        CoroutineScope(Dispatchers.IO).launch {
+            val item = alarmRepository.getAlarm(alarmId)
+            if (item == null) stopSelf()
+
+            val notification = getAlarmNotification(item!!)
+            startForeground(alarmId.hashCode(), notification)
+        }
         return START_STICKY
     }
 
-    private fun getNotification(alarmId: Long): Notification {
-        val fullScreenIntent = Intent(this, AlarmDisplayActivity::class.java)
-        val fullScreenPendingIntent = PendingIntent.getActivity(
-            this,
-            alarmId.hashCode(),
-            fullScreenIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+    private fun getAlarmNotification(item: AlarmWithWeeklySchedules): Notification =
+        with(item.alarm) {
+            val fullScreenIntent =
+                Intent(this@AlarmService, AlarmDisplayActivity::class.java).apply {
+                    putExtra("ALARM_ID", id)
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK
+                    )
+                }
+            val fullScreenPendingIntent = PendingIntent.getActivity(
+                this@AlarmService,
+                id.hashCode(),
+                fullScreenIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
-        return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
-            .setContentTitle("Put alarm note here!")
-            .setContentText("Alarm is scheduled for HH:mm. Tap here to dismiss!")
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setFullScreenIntent(fullScreenPendingIntent, true)  // Show even when locked
-            .build()
-    }
+            return NotificationCompat.Builder(this@AlarmService, NOTIFICATION_CHANNEL_ID)
+                .setContentTitle(item.alarm.note ?: "Untitled alarm")
+                .setContentText("Alarm is scheduled for ${alarmTime.format(timeFormatter)}. Tap here to dismiss!")
+                .setSmallIcon(R.drawable.outline_access_alarm_24)
+                .setPriority(NotificationCompat.PRIORITY_MAX)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setCategory(NotificationCompat.CATEGORY_ALARM)
+                .setFullScreenIntent(fullScreenPendingIntent, true)  // Show even when locked
+                .setOngoing(true)
+                .setAutoCancel(false)
+                .build()
+        }
 
     private fun ensureNotificationChannelExists() {
         val channel = NotificationChannel(

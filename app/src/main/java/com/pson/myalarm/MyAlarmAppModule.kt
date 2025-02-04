@@ -16,7 +16,7 @@ interface IMyAlarmAppModule {
     val database: AlarmDatabase
     val alarmRepository: IAlarmRepository
     val alarmScheduler: AlarmScheduler
-    val viewModelFactory: ViewModelProvider.Factory
+    val mainViewModelFactory: ViewModelProvider.Factory
 }
 
 class MyAlarmAppModule(private val appContext: Context) : IMyAlarmAppModule {
@@ -27,7 +27,7 @@ class MyAlarmAppModule(private val appContext: Context) : IMyAlarmAppModule {
 
     override val alarmScheduler: AlarmScheduler by lazy { AlarmScheduler(appContext) }
 
-    override val viewModelFactory: ViewModelProvider.Factory
+    override val mainViewModelFactory: ViewModelProvider.Factory
         get() = viewModelFactory {
             initializer {
                 AlarmListViewModel(

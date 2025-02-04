@@ -73,7 +73,7 @@ internal fun AlarmListScreen(
     onEditAlarm: (Long?) -> Unit,
     recentSavedAlarmId: Long,
     resetRecentSavedAlarmId: () -> Unit,
-    viewModel: AlarmListViewModel = viewModel<AlarmListViewModel>(factory = MyAlarmApplication.appModule.viewModelFactory),
+    viewModel: AlarmListViewModel = viewModel<AlarmListViewModel>(factory = MyAlarmApplication.appModule.mainViewModelFactory),
 ) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle()
     val isDeleting = (uiState.value as? AlarmListUiState.Success)?.isDeleting ?: false

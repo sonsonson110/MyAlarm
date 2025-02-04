@@ -11,6 +11,7 @@ import com.pson.myalarm.util.TimeHelper
 import java.util.Calendar
 
 interface IAlarmScheduler {
+    fun snooze(item:AlarmWithWeeklySchedules)
     fun schedule(item: AlarmWithWeeklySchedules)
     fun cancel(item: AlarmWithWeeklySchedules)
 }
@@ -22,46 +23,59 @@ class AlarmScheduler(
     private val alarmManager: AlarmManager =
         context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
+    override fun snooze(item: AlarmWithWeeklySchedules) = with(item.alarm) {
+//        val snoozeTime = when(snoozeTimeMinutes) {
+//            null -> 5 * 60 * 1000L  // 5 minutes
+//            else -> snoozeTimeMinutes * 60 * 1000L
+//        }
+        val snoozeTime = 3 * 1000L
+        val scheduleTime = TimeHelper.nowInMillis() + snoozeTime
+
+        val pendingIntent = generatePendingIntent(item)
+        pendingIntent.scheduleAlarmClock(scheduleTime)
+    }
+
     override fun schedule(item: AlarmWithWeeklySchedules) {
 //        val scheduleTime = getFutureScheduleTime(item)
         val scheduleTime = System.currentTimeMillis() + 5000L
 
-        val pendingIntent = PendingIntent.getBroadcast(
+        val pendingIntent = generatePendingIntent(item)
+        pendingIntent.scheduleAlarmClock(scheduleTime)
+    }
+
+    override fun cancel(item: AlarmWithWeeklySchedules) {
+        val pendingIntent = generatePendingIntent(item)
+        alarmManager.cancel(pendingIntent)
+    }
+
+    private fun generatePendingIntent(item: AlarmWithWeeklySchedules): PendingIntent {
+        val intent = Intent(this.context, AlarmReceiver::class.java).apply {
+            putExtra("ALARM_ID", item.alarm.id)
+        }
+
+        return PendingIntent.getBroadcast(
             context,
             item.alarm.id.hashCode(),
-            generateIntent(item),
+            intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+    }
 
+    private fun PendingIntent.scheduleAlarmClock(scheduleTime: Long) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (alarmManager.canScheduleExactAlarms()) {
                 alarmManager.setAlarmClock(
-                    AlarmManager.AlarmClockInfo(scheduleTime, pendingIntent),
-                    pendingIntent
+                    AlarmManager.AlarmClockInfo(scheduleTime, this),
+                    this
                 )
             }
         } else {
             alarmManager.setAlarmClock(
-                AlarmManager.AlarmClockInfo(scheduleTime, pendingIntent),
-                pendingIntent
+                AlarmManager.AlarmClockInfo(scheduleTime, this),
+                this
             )
         }
     }
-
-    override fun cancel(item: AlarmWithWeeklySchedules) {
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            item.alarm.id.hashCode(),
-            generateIntent(item),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        pendingIntent?.let { alarmManager.cancel(it) }
-    }
-
-    private fun generateIntent(item: AlarmWithWeeklySchedules) =
-        Intent(this.context, AlarmReceiver::class.java).apply {
-            putExtra("ALARM_ID", item.alarm.id)
-        }
 
     companion object {
         fun getFutureScheduleTime(item: AlarmWithWeeklySchedules): Long {

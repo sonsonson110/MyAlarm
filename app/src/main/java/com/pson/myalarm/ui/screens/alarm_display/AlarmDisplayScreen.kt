@@ -16,33 +16,43 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.pson.myalarm.data.model.Alarm
-import com.pson.myalarm.data.model.AlarmWithWeeklySchedules
-import java.time.LocalTime
 
 @Composable
 fun AlarmDisplayScreen(
-    item: AlarmWithWeeklySchedules,
+    uiState: AlarmDisplayUiState,
     onSnooze: () -> Unit,
     onDismiss: () -> Unit
 ) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.7f)), // Dim background to 70%
+            .background(Color.Black.copy(alpha = 0.7f))
+            .padding(horizontal = 28.dp),
         contentAlignment = Alignment.Center
     ) {
+        if (uiState is AlarmDisplayUiState.Error) {
+            Text(
+                uiState.message,
+                color = Color.White,
+                style = MaterialTheme.typography.headlineLarge,
+                textAlign = TextAlign.Center
+            )
+            return@Box
+        }
+        if (uiState is AlarmDisplayUiState.Loading) {
+            return@Box
+        }
         // Central content (note and snooze button)
+        val item = (uiState as? AlarmDisplayUiState.Success)?.item ?: return@Box
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
             // Note display
             Text(
-                text = item.alarm.note ?: "",
-                style = MaterialTheme.typography.headlineMedium,
+                text = item.alarm.note ?: "Untitled alarm",
+                style = MaterialTheme.typography.displayMedium,
                 color = Color.White,
                 textAlign = TextAlign.Center
             )
@@ -53,12 +63,9 @@ fun AlarmDisplayScreen(
                 modifier = Modifier
                     .padding(top = 24.dp)
                     .width(200.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
             ) {
                 Text(
-                    "Snooze 15min",
+                    "Snooze",
                     style = MaterialTheme.typography.titleMedium
                 )
             }
@@ -77,29 +84,9 @@ fun AlarmDisplayScreen(
         ) {
             Text(
                 "Stop",
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onError
             )
         }
-    }
-}
-
-// Preview
-@Preview(showBackground = true)
-@Composable
-fun AlarmDisplayScreenPreview() {
-    MaterialTheme {
-        AlarmDisplayScreen(
-            AlarmWithWeeklySchedules(
-                alarm = Alarm(
-                    id = 1,
-                    alarmTime = LocalTime.of(11, 0),
-                    note = "Test alarm",
-                    isActive = true
-                ),
-                weeklySchedules = emptyList()
-            ),
-            onSnooze = {},
-            onDismiss = {}
-        )
     }
 }

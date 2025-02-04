@@ -67,7 +67,7 @@ import java.time.LocalTime
 internal fun AlarmEditScreen(
     onNavigateUp: (Long?) -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: AlarmEditViewModel = viewModel<AlarmEditViewModel>(factory = MyAlarmApplication.appModule.viewModelFactory)
+    viewModel: AlarmEditViewModel = viewModel<AlarmEditViewModel>(factory = MyAlarmApplication.appModule.mainViewModelFactory)
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
 
