@@ -23,8 +23,7 @@
         <activity
             android:name=".AlarmDisplayActivity"
             android:exported="false"
-            android:launchMode="singleTask"
-            android:theme="@style/Theme.Transparent" />
+            android:launchMode="singleTask"  />
         <activity
             android:name=".MainActivity"
             android:exported="true"

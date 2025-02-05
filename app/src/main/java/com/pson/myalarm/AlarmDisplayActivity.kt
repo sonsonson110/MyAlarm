@@ -19,12 +19,6 @@ import com.pson.myalarm.ui.screens.alarm_display.AlarmDisplayScreen
 import com.pson.myalarm.ui.screens.alarm_display.AlarmDisplayViewModel
 import com.pson.myalarm.ui.theme.MyAlarmTheme
 
-/*
-    TODO:
-    1. Remove dim background
-    2. Add alert window about the alarm on top
-    3. Add sound...
- */
 class AlarmDisplayActivity : ComponentActivity() {
 
     private lateinit var viewModel: AlarmDisplayViewModel
@@ -71,6 +65,14 @@ class AlarmDisplayActivity : ComponentActivity() {
         }
     }
 
+    // Any interaction on navigation bar is counted as DISMISS button
+    override fun onStop() {
+        super.onStop()
+        viewModel.snooze()
+        stopAlarmService()
+        finish() // finish the activity alone
+    }
+
     private fun initializeDependencies() {
 
         viewModel = ViewModelProvider(
@@ -104,5 +106,13 @@ class AlarmDisplayActivity : ComponentActivity() {
     private fun stopAlarmService() {
         val stopIntent = Intent(this, AlarmService::class.java)
         stopService(stopIntent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (intent.getBooleanExtra("SHOULD_FINISH", false)) {
+            finishAffinity()
+            return
+        }
     }
 }

@@ -14,6 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -27,7 +28,14 @@ fun AlarmDisplayScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.7f))
+            .background(
+                brush = Brush.linearGradient(
+                    listOf(
+                        Color.Black.copy(alpha = 0.7f),
+                        Color.DarkGray
+                    )
+                )
+            )
             .padding(horizontal = 28.dp),
         contentAlignment = Alignment.Center
     ) {
