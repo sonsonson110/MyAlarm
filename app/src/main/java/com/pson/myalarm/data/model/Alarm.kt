@@ -10,5 +10,7 @@ data class Alarm(
     val alarmTime: LocalTime,
     val note: String? = null,
     val snoozeTimeMinutes: Int? = null,
-    val isActive: Boolean = true
+    val isActive: Boolean = true,
+    val audioUri: String? = null,
+    val audioName: String? = null
 )

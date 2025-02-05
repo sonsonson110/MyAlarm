@@ -9,6 +9,10 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
+import android.media.AudioAttributes
+import android.media.MediaPlayer
+import android.media.RingtoneManager
+import android.net.Uri
 import android.os.IBinder
 import android.provider.Settings
 import android.view.Gravity
@@ -36,6 +40,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.FileNotFoundException
 import java.time.format.DateTimeFormatter
 
 // TODO: Add sound
@@ -53,6 +58,7 @@ class AlarmService : Service(), LifecycleOwner,
     private lateinit var alarmScheduler: IAlarmScheduler
     private lateinit var alarmRepository: IAlarmRepository
 
+    private var mediaPlayer: MediaPlayer? = null
     private lateinit var windowManager: WindowManager
     private var composeView: ComposeView? = null
 
@@ -81,6 +87,8 @@ class AlarmService : Service(), LifecycleOwner,
 
             val notification = getAlarmNotification(item!!)
             startForeground(alarmId.hashCode(), notification)
+
+            playSound(item.alarm.audioUri)
 
             // Main thread for UI
             withContext(Dispatchers.Main) {
@@ -180,6 +188,9 @@ class AlarmService : Service(), LifecycleOwner,
         // Remove overlay
         hideOverlayWindow()
 
+        // Stop media player
+        stopSound()
+
         // Remove the notification
         val notificationManager = NotificationManagerCompat.from(this)
         notificationManager.cancel(alarmId.hashCode())
@@ -223,6 +234,45 @@ class AlarmService : Service(), LifecycleOwner,
 
         val topActivity = appTasks[0].taskInfo?.topActivity
         return topActivity?.className?.contains(AlarmDisplayActivity::class.simpleName!!) == true
+    }
+
+    private fun playSound(musicUri: String?) {
+        stopSound()
+
+        mediaPlayer = MediaPlayer().apply {
+            setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .setUsage(AudioAttributes.USAGE_ALARM)
+                    .build()
+            )
+
+            // Set data source
+            try {
+                val uri = musicUri?.let { Uri.parse(it) }
+                if (uri != null) {
+                    setDataSource(this@AlarmService, uri)
+                } else {
+                    throw FileNotFoundException("Music file not found")
+                }
+            } catch (e: Exception) {
+                // Fallback to default alarm sound if the file is missing or any error occurs
+                val defaultAlarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                setDataSource(this@AlarmService, defaultAlarmUri)
+            }
+
+            isLooping = true
+            prepare()
+            start()
+        }
+    }
+
+    private fun stopSound() {
+        mediaPlayer?.apply {
+            if (isPlaying) stop()
+            release()
+        }
+        mediaPlayer = null
     }
 
     override fun onBind(p0: Intent?): IBinder? = null
