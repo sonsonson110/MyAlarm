@@ -28,7 +28,7 @@ class AlarmScheduler(
 //            null -> 5 * 60 * 1000L  // 5 minutes
 //            else -> snoozeTimeMinutes * 60 * 1000L
 //        }
-        val snoozeTime = 3 * 1000L
+        val snoozeTime = 6_000L
         val scheduleTime = TimeHelper.nowInMillis() + snoozeTime
 
         val pendingIntent = generatePendingIntent(item)
@@ -37,7 +37,7 @@ class AlarmScheduler(
 
     override fun schedule(item: AlarmWithWeeklySchedules) {
 //        val scheduleTime = getFutureScheduleTime(item)
-        val scheduleTime = System.currentTimeMillis() + 5000L
+        val scheduleTime = System.currentTimeMillis() + 10_000L
 
         val pendingIntent = generatePendingIntent(item)
         pendingIntent.scheduleAlarmClock(scheduleTime)

@@ -18,21 +18,25 @@ import com.pson.myalarm.core.service.AlarmService
 import com.pson.myalarm.ui.screens.alarm_display.AlarmDisplayScreen
 import com.pson.myalarm.ui.screens.alarm_display.AlarmDisplayViewModel
 import com.pson.myalarm.ui.theme.MyAlarmTheme
+import kotlin.system.exitProcess
 
 class AlarmDisplayActivity : ComponentActivity() {
 
     private lateinit var viewModel: AlarmDisplayViewModel
+    private var shouldExitOnEvent = false
     private var alarmId = -1L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Retrieve the ALARM_ID from the intent
-        alarmId = intent?.getLongExtra("ALARM_ID", -1) ?: -1
+        // Retrieve the data from the intent
+        intent?.let {
+            shouldExitOnEvent = it.getBooleanExtra("SHOULD_EXIT_ON_EVENT", false)
+            alarmId = it.getLongExtra("ALARM_ID", -1)
+        }
 
         if (alarmId == -1L) {
-            finishAffinity() // Close if no valid alarm ID
-            return
+            exitProcess(0)
         }
 
         setWindowDisplayFlag()
@@ -54,12 +58,12 @@ class AlarmDisplayActivity : ComponentActivity() {
                     onSnooze = {
                         viewModel.snooze()
                         stopAlarmService()
-                        finishAffinity()
+                        endAlarmDisplay()
                     },
                     onDismiss = {
                         viewModel.scheduleNext()
                         stopAlarmService()
-                        finishAffinity()
+                        endAlarmDisplay()
                     })
             }
         }
@@ -108,11 +112,19 @@ class AlarmDisplayActivity : ComponentActivity() {
         stopService(stopIntent)
     }
 
+    // Used when user interacts with overlay when activity is upfront
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (intent.getBooleanExtra("SHOULD_FINISH", false)) {
             finishAffinity()
             return
+        }
+    }
+
+    private fun endAlarmDisplay() {
+        return when(shouldExitOnEvent) {
+            true -> finishAffinity()
+            false -> finish()
         }
     }
 }

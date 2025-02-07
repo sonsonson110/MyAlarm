@@ -6,8 +6,6 @@ import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -268,9 +266,6 @@ internal fun AlarmEditScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(Color.Black.copy(alpha = 0.5f))
-                            .clickable(indication = null, // disable ripple effect
-                                interactionSource = remember { MutableInteractionSource() },
-                                onClick = { }), contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator()
                     }

@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.work.WorkManager
 import com.pson.myalarm.core.alarm.AlarmScheduler
 import com.pson.myalarm.data.AlarmDatabase
 import com.pson.myalarm.data.repository.AlarmRepository
@@ -39,7 +40,8 @@ class MyAlarmAppModule(private val appContext: Context) : IMyAlarmAppModule {
                 AlarmEditViewModel(
                     alarmRepository,
                     alarmScheduler,
-                    this.createSavedStateHandle()
+                    this.createSavedStateHandle(),
+                    WorkManager.getInstance(appContext)
                 )
             }
         }

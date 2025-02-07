@@ -29,6 +29,7 @@ import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.pson.myalarm.AlarmDisplayActivity
+import com.pson.myalarm.GlobalStateManager
 import com.pson.myalarm.MyAlarmApplication
 import com.pson.myalarm.R
 import com.pson.myalarm.core.alarm.IAlarmScheduler
@@ -43,7 +44,6 @@ import kotlinx.coroutines.withContext
 import java.io.FileNotFoundException
 import java.time.format.DateTimeFormatter
 
-// TODO: Add sound
 class AlarmService : Service(), LifecycleOwner,
     SavedStateRegistryOwner {
 
@@ -85,14 +85,14 @@ class AlarmService : Service(), LifecycleOwner,
             val item = alarmRepository.getAlarm(alarmId)
             if (item == null) stopSelf()
 
+            GlobalStateManager.setTriggeringAlarmId(alarmId)
             val notification = getAlarmNotification(item!!)
             startForeground(alarmId.hashCode(), notification)
-
-            playSound(item.alarm.audioUri)
 
             // Main thread for UI
             withContext(Dispatchers.Main) {
                 showOverlayWindow(item)
+                playSound(item.alarm.audioUri)
             }
         }
         return START_STICKY
@@ -103,9 +103,9 @@ class AlarmService : Service(), LifecycleOwner,
             val fullScreenIntent =
                 Intent(this@AlarmService, AlarmDisplayActivity::class.java).apply {
                     putExtra("ALARM_ID", id)
-                    addFlags(
-                        Intent.FLAG_ACTIVITY_NEW_TASK
-                    )
+                    putExtra("SHOULD_EXIT_ON_EVENT", true)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                            or Intent.FLAG_FROM_BACKGROUND)
                 }
             val fullScreenPendingIntent = PendingIntent.getActivity(
                 this@AlarmService,
@@ -120,12 +120,10 @@ class AlarmService : Service(), LifecycleOwner,
                 .setContentTitle(item.alarm.note ?: "Untitled alarm")
                 .setContentText("Alarm is set for ${alarmTime.format(timeFormatter)}. Tap to dismiss!")
                 .setSmallIcon(R.drawable.outline_access_alarm_24)
-                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setFullScreenIntent(fullScreenPendingIntent, true)  // Show even when locked
-                .setOngoing(true)
-                .setAutoCancel(false)
                 .build()
         }
 
@@ -182,19 +180,13 @@ class AlarmService : Service(), LifecycleOwner,
     }
 
     private fun stopService() {
-        // Also stop alarm display activity (if shown)
+        GlobalStateManager.setTriggeringAlarmId(-1)
         stopAlarmDisplayActivity()
-
-        // Remove overlay
         hideOverlayWindow()
-
-        // Stop media player
         stopSound()
-
         // Remove the notification
         val notificationManager = NotificationManagerCompat.from(this)
         notificationManager.cancel(alarmId.hashCode())
-
         // Stop the service
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
@@ -210,9 +202,10 @@ class AlarmService : Service(), LifecycleOwner,
         val channel = NotificationChannel(
             NOTIFICATION_CHANNEL_ID,
             "Alarm reminder notification",
-            NotificationManager.IMPORTANCE_LOW,
+            NotificationManager.IMPORTANCE_HIGH,
         ).apply {
             description = "Allow an alarm notification to show up"
+            setSound(null, null) // keep the importance but remove sound
         }
         // Register the channel with the system
         NotificationManagerCompat.from(this).createNotificationChannel(channel)

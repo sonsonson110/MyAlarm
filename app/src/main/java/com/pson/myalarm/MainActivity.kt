@@ -1,6 +1,7 @@
 package com.pson.myalarm
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -18,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -31,6 +33,20 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Stack alarm display screen on top if alarm is triggering
+        GlobalStateManager.observeAlarmTrigger(lifecycleScope) { alarmId ->
+            startActivity(
+                Intent(
+                    this@MainActivity,
+                    AlarmDisplayActivity::class.java
+                ).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    putExtra("ALARM_ID", alarmId)
+                }
+            )
+        }
+
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.auto(
                 android.graphics.Color.TRANSPARENT,
@@ -64,6 +80,16 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        GlobalStateManager.setIsMainActivityInForeground(true)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        GlobalStateManager.setIsMainActivityInForeground(false)
     }
 }
 
