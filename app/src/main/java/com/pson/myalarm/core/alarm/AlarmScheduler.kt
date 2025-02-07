@@ -5,7 +5,6 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import com.pson.myalarm.core.receiver.AlarmReceiver
 import com.pson.myalarm.data.model.AlarmWithWeeklySchedules
 import com.pson.myalarm.util.TimeHelper
 import java.util.Calendar

@@ -1,10 +1,9 @@
-package com.pson.myalarm.core.receiver
+package com.pson.myalarm.core.alarm
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.ContextCompat
-import com.pson.myalarm.core.service.AlarmService
 
 class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {

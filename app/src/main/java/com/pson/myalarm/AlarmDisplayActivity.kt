@@ -14,7 +14,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.pson.myalarm.core.service.AlarmService
+import com.pson.myalarm.core.alarm.AlarmService
 import com.pson.myalarm.ui.screens.alarm_display.AlarmDisplayScreen
 import com.pson.myalarm.ui.screens.alarm_display.AlarmDisplayViewModel
 import com.pson.myalarm.ui.theme.MyAlarmTheme

@@ -1,4 +1,4 @@
-package com.pson.myalarm.core.service
+package com.pson.myalarm.core.alarm
 
 import android.app.ActivityManager
 import android.app.Notification
@@ -32,7 +32,6 @@ import com.pson.myalarm.AlarmDisplayActivity
 import com.pson.myalarm.GlobalStateManager
 import com.pson.myalarm.MyAlarmApplication
 import com.pson.myalarm.R
-import com.pson.myalarm.core.alarm.IAlarmScheduler
 import com.pson.myalarm.data.model.AlarmWithWeeklySchedules
 import com.pson.myalarm.data.repository.IAlarmRepository
 import com.pson.myalarm.ui.components.AlarmOverlay

@@ -36,11 +36,20 @@
         </activity>
 
         <receiver
-            android:name=".core.receiver.AlarmReceiver"
+            android:name=".core.alarm.AlarmReceiver"
             android:exported="false" />
+        <receiver android:name=".core.widget.MyAlarmWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/my_alarm_widget_info" />
+        </receiver>
 
         <service
-            android:name=".core.service.AlarmService"
+            android:name=".core.alarm.AlarmService"
             android:foregroundServiceType="specialUse" />
     </application>
 
