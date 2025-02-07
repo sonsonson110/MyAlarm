@@ -39,7 +39,12 @@ import com.pson.myalarm.ui.components.AlarmOverlay
 import com.pson.myalarm.ui.theme.MyAlarmTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.io.FileNotFoundException
 import java.time.format.DateTimeFormatter
@@ -62,6 +67,9 @@ class AlarmService : Service(), LifecycleOwner,
     private lateinit var windowManager: WindowManager
     private var composeView: ComposeView? = null
 
+    private var autoSnoozeJob: Job? = null
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
     override fun onCreate() {
         super.onCreate()
 
@@ -79,23 +87,37 @@ class AlarmService : Service(), LifecycleOwner,
         alarmId = intent?.getLongExtra("ALARM_ID", -1) ?: return START_NOT_STICKY
         if (alarmId == -1L) return START_NOT_STICKY
 
+        // Block to check if alarm exists
+        val item = runBlocking(Dispatchers.IO) {
+            alarmRepository.getAlarm(alarmId)
+        } ?: return START_NOT_STICKY  // Don't start if no alarm found
+
         ensureNotificationChannelExists()
 
-        CoroutineScope(Dispatchers.IO).launch {
-            val item = alarmRepository.getAlarm(alarmId)
-            if (item == null) stopSelf()
-
+        serviceScope.launch {
             GlobalStateManager.setTriggeringAlarmId(alarmId)
-            val notification = getAlarmNotification(item!!)
+            val notification = getAlarmNotification(item)
             startForeground(alarmId.hashCode(), notification)
 
             // Main thread for UI
             withContext(Dispatchers.Main) {
                 showOverlayWindow(item)
                 playSound(item.alarm.audioUri)
+                startAutoSnoozeTimer(item)
             }
         }
         return START_STICKY
+    }
+
+    private fun startAutoSnoozeTimer(item: AlarmWithWeeklySchedules) {
+        autoSnoozeJob?.cancel() // Cancel any existing timer
+
+        autoSnoozeJob = serviceScope.launch {
+            delay(50_000L)
+            // Auto snooze the alarm
+            alarmScheduler.snooze(item)
+            stopService()
+        }
     }
 
     private fun getAlarmNotification(item: AlarmWithWeeklySchedules): Notification =
@@ -104,8 +126,10 @@ class AlarmService : Service(), LifecycleOwner,
                 Intent(this@AlarmService, AlarmDisplayActivity::class.java).apply {
                     putExtra("ALARM_ID", id)
                     putExtra("SHOULD_EXIT_ON_EVENT", true)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
-                            or Intent.FLAG_FROM_BACKGROUND)
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK
+                                or Intent.FLAG_FROM_BACKGROUND
+                    )
                 }
             val fullScreenPendingIntent = PendingIntent.getActivity(
                 this@AlarmService,
@@ -180,6 +204,7 @@ class AlarmService : Service(), LifecycleOwner,
     }
 
     private fun stopService() {
+        autoSnoozeJob?.cancel()
         GlobalStateManager.setTriggeringAlarmId(-1)
         stopAlarmDisplayActivity()
         hideOverlayWindow()
@@ -194,6 +219,7 @@ class AlarmService : Service(), LifecycleOwner,
 
     override fun onDestroy() {
         super.onDestroy()
+        serviceScope.cancel() // Cancel all coroutines when service is destroyed
         stopService()
         _lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
     }
