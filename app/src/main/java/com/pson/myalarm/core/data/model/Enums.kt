@@ -1,4 +1,4 @@
-package com.pson.myalarm.data.model
+package com.pson.myalarm.core.data.model
 
 import java.util.Calendar
 

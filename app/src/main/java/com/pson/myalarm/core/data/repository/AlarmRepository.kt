@@ -1,7 +1,7 @@
-package com.pson.myalarm.data.repository
+package com.pson.myalarm.core.data.repository
 
-import com.pson.myalarm.data.dao.AlarmDao
-import com.pson.myalarm.data.model.AlarmWithWeeklySchedules
+import com.pson.myalarm.core.data.dao.AlarmDao
+import com.pson.myalarm.core.data.model.AlarmWithWeeklySchedules
 import kotlinx.coroutines.flow.Flow
 
 interface IAlarmRepository {

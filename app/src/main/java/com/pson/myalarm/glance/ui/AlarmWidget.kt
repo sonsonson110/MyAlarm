@@ -1,4 +1,4 @@
-package com.pson.myalarm.ui.components
+package com.pson.myalarm.glance.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
@@ -31,10 +31,10 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.pson.myalarm.R
-import com.pson.myalarm.data.model.Alarm
-import com.pson.myalarm.data.model.AlarmWithWeeklySchedules
-import com.pson.myalarm.data.model.DayOfWeek
-import com.pson.myalarm.data.model.WeeklySchedule
+import com.pson.myalarm.core.data.model.Alarm
+import com.pson.myalarm.core.data.model.AlarmWithWeeklySchedules
+import com.pson.myalarm.core.data.model.DayOfWeek
+import com.pson.myalarm.core.data.model.WeeklySchedule
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
@@ -95,8 +95,8 @@ internal fun AlarmWidget(
             }
             Spacer(GlanceModifier.height(6.dp))
             Row {
-                DayOfWeek.entries.forEachIndexed { idx, day ->
-                    val daysInWeek = DayOfWeek.entries.size
+                com.pson.myalarm.core.data.model.DayOfWeek.entries.forEachIndexed { idx, day ->
+                    val daysInWeek = com.pson.myalarm.core.data.model.DayOfWeek.entries.size
                     val isRepeatDay = weeklySchedules.map { it.dayOfWeek }.contains(day)
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,

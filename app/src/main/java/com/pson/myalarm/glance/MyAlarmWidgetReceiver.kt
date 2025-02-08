@@ -1,4 +1,4 @@
-package com.pson.myalarm.core.widget
+package com.pson.myalarm.glance
 
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver

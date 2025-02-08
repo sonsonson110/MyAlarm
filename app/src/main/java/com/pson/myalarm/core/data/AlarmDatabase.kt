@@ -1,13 +1,13 @@
-package com.pson.myalarm.data
+package com.pson.myalarm.core.data
 
 import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import com.pson.myalarm.data.dao.AlarmDao
-import com.pson.myalarm.data.model.Alarm
-import com.pson.myalarm.data.model.WeeklySchedule
+import com.pson.myalarm.core.data.dao.AlarmDao
+import com.pson.myalarm.core.data.model.Alarm
+import com.pson.myalarm.core.data.model.WeeklySchedule
 
 @Database(
     entities = [Alarm::class, WeeklySchedule::class],

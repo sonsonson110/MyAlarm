@@ -5,12 +5,12 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import com.pson.myalarm.data.model.AlarmWithWeeklySchedules
+import com.pson.myalarm.core.data.model.AlarmWithWeeklySchedules
 import com.pson.myalarm.util.TimeHelper
 import java.util.Calendar
 
 interface IAlarmScheduler {
-    fun snooze(item:AlarmWithWeeklySchedules)
+    fun snooze(item: AlarmWithWeeklySchedules)
     fun schedule(item: AlarmWithWeeklySchedules)
     fun cancel(item: AlarmWithWeeklySchedules)
 }

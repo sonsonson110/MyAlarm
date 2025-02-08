@@ -5,8 +5,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.pson.myalarm.MyAlarmApplication
 import com.pson.myalarm.core.alarm.IAlarmScheduler
-import com.pson.myalarm.data.model.AlarmWithWeeklySchedules
-import com.pson.myalarm.data.repository.IAlarmRepository
+import com.pson.myalarm.core.data.model.AlarmWithWeeklySchedules
+import com.pson.myalarm.core.data.repository.IAlarmRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update

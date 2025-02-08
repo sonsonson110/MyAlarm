@@ -59,7 +59,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pson.myalarm.MyAlarmApplication
 import com.pson.myalarm.core.alarm.AlarmScheduler
-import com.pson.myalarm.data.model.AlarmWithWeeklySchedules
+import com.pson.myalarm.core.data.model.DayOfWeek
+import com.pson.myalarm.core.data.model.AlarmWithWeeklySchedules
 import com.pson.myalarm.ui.shared.DayCircle
 import com.pson.myalarm.util.TimeHelper
 import kotlinx.coroutines.delay
@@ -375,7 +376,7 @@ internal fun AlarmItem(
                     color = if (!item.alarm.isActive) MaterialTheme.colorScheme.outline else Color.Unspecified
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    com.pson.myalarm.data.model.DayOfWeek.entries.forEach { day ->
+                    DayOfWeek.entries.forEach { day ->
                         DayCircle(
                             day.abbreviation,
                             item.weeklySchedules.any { it.dayOfWeek == day },

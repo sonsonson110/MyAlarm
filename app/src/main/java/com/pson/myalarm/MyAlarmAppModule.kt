@@ -7,9 +7,9 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.work.WorkManager
 import com.pson.myalarm.core.alarm.AlarmScheduler
-import com.pson.myalarm.data.AlarmDatabase
-import com.pson.myalarm.data.repository.AlarmRepository
-import com.pson.myalarm.data.repository.IAlarmRepository
+import com.pson.myalarm.core.data.AlarmDatabase
+import com.pson.myalarm.core.data.repository.AlarmRepository
+import com.pson.myalarm.core.data.repository.IAlarmRepository
 import com.pson.myalarm.ui.screens.alarm_edit.AlarmEditViewModel
 import com.pson.myalarm.ui.screens.alarm_list.AlarmListViewModel
 

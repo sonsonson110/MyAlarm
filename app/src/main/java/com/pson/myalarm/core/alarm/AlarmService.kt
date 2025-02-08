@@ -32,8 +32,8 @@ import com.pson.myalarm.AlarmDisplayActivity
 import com.pson.myalarm.GlobalStateManager
 import com.pson.myalarm.MyAlarmApplication
 import com.pson.myalarm.R
-import com.pson.myalarm.data.model.AlarmWithWeeklySchedules
-import com.pson.myalarm.data.repository.IAlarmRepository
+import com.pson.myalarm.core.data.model.AlarmWithWeeklySchedules
+import com.pson.myalarm.core.data.repository.IAlarmRepository
 import com.pson.myalarm.ui.components.AlarmOverlay
 import com.pson.myalarm.ui.theme.MyAlarmTheme
 import kotlinx.coroutines.CoroutineScope

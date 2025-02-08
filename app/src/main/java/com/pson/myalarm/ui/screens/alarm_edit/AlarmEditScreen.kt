@@ -67,7 +67,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pson.myalarm.MyAlarmApplication
 import com.pson.myalarm.R
-import com.pson.myalarm.data.model.DayOfWeek
+import com.pson.myalarm.core.data.model.DayOfWeek
 import com.pson.myalarm.ui.shared.DayCircle
 import com.pson.myalarm.ui.theme.MyAlarmTheme
 import java.time.LocalTime

@@ -1,9 +1,9 @@
 package com.pson.myalarm.core.alarm
 
-import com.pson.myalarm.data.model.Alarm
-import com.pson.myalarm.data.model.AlarmWithWeeklySchedules
-import com.pson.myalarm.data.model.DayOfWeek
-import com.pson.myalarm.data.model.WeeklySchedule
+import com.pson.myalarm.core.data.model.Alarm
+import com.pson.myalarm.core.data.model.AlarmWithWeeklySchedules
+import com.pson.myalarm.core.data.model.DayOfWeek
+import com.pson.myalarm.core.data.model.WeeklySchedule
 import com.pson.myalarm.util.TimeHelper
 import io.mockk.every
 import io.mockk.mockkObject

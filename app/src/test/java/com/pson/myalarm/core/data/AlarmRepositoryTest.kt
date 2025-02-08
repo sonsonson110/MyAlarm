@@ -1,10 +1,12 @@
-package com.pson.myalarm.data.repository
+package com.pson.myalarm.core.data
 
-import com.pson.myalarm.data.dao.AlarmDao
-import com.pson.myalarm.data.model.Alarm
-import com.pson.myalarm.data.model.AlarmWithWeeklySchedules
-import com.pson.myalarm.data.model.DayOfWeek
-import com.pson.myalarm.data.model.WeeklySchedule
+import com.pson.myalarm.core.data.repository.AlarmRepository
+import com.pson.myalarm.core.data.repository.IAlarmRepository
+import com.pson.myalarm.core.data.dao.AlarmDao
+import com.pson.myalarm.core.data.model.Alarm
+import com.pson.myalarm.core.data.model.AlarmWithWeeklySchedules
+import com.pson.myalarm.core.data.model.DayOfWeek
+import com.pson.myalarm.core.data.model.WeeklySchedule
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk

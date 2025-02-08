@@ -1,4 +1,4 @@
-package com.pson.myalarm.data
+package com.pson.myalarm.core.data
 
 import androidx.room.TypeConverter
 import java.time.LocalTime

@@ -3,8 +3,8 @@ package com.pson.myalarm.ui.screens.alarm_list
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pson.myalarm.core.alarm.AlarmScheduler
-import com.pson.myalarm.data.model.AlarmWithWeeklySchedules
-import com.pson.myalarm.data.repository.IAlarmRepository
+import com.pson.myalarm.core.data.model.AlarmWithWeeklySchedules
+import com.pson.myalarm.core.data.repository.IAlarmRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update

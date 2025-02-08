@@ -1,13 +1,13 @@
-package com.pson.myalarm.data.dao
+package com.pson.myalarm.core.data.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
-import com.pson.myalarm.data.model.Alarm
-import com.pson.myalarm.data.model.AlarmWithWeeklySchedules
-import com.pson.myalarm.data.model.WeeklySchedule
+import com.pson.myalarm.core.data.model.Alarm
+import com.pson.myalarm.core.data.model.AlarmWithWeeklySchedules
+import com.pson.myalarm.core.data.model.WeeklySchedule
 import kotlinx.coroutines.flow.Flow
 
 @Dao

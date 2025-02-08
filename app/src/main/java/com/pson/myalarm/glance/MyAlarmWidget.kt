@@ -1,20 +1,15 @@
-package com.pson.myalarm.core.widget
+package com.pson.myalarm.glance
 
 import android.content.Context
 import androidx.glance.GlanceId
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.provideContent
-import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.PeriodicWorkRequestBuilder
-import androidx.work.WorkManager
-import com.pson.myalarm.data.model.Alarm
-import com.pson.myalarm.data.model.AlarmWithWeeklySchedules
-import com.pson.myalarm.data.model.DayOfWeek
-import com.pson.myalarm.data.model.WeeklySchedule
-import com.pson.myalarm.data.repository.AlarmRepository
-import com.pson.myalarm.ui.components.AlarmWidget
+import com.pson.myalarm.core.data.model.Alarm
+import com.pson.myalarm.core.data.model.AlarmWithWeeklySchedules
+import com.pson.myalarm.core.data.model.DayOfWeek
+import com.pson.myalarm.core.data.model.WeeklySchedule
+import com.pson.myalarm.glance.ui.AlarmWidget
 import java.time.LocalTime
-import java.util.concurrent.TimeUnit
 
 class MyAlarmWidget : GlanceAppWidget() {
 
