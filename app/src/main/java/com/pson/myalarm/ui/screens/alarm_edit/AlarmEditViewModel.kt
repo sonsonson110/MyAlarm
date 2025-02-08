@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.workDataOf
@@ -129,7 +130,8 @@ class AlarmEditViewModel(
     private suspend fun saveAlarmWithAudio(state: AlarmEditUiState.Success): Long {
         var saveItem = state.toAlarmWithWeeklySchedules()
         val hasExisted = saveItem.alarm.id != 0L
-        val audioCopyWorkId = copyAudioToAppDir(saveItem.alarm.audioUri!!, saveItem.alarm.audioName!!)
+        val audioCopyWorkId =
+            copyAudioToAppDir(saveItem.alarm.audioUri!!, saveItem.alarm.audioName!!)
 
         return withTimeoutOrNull(30_000) { // 30 seconds timeout
             suspendCancellableCoroutine { continuation ->
@@ -138,8 +140,10 @@ class AlarmEditViewModel(
                 viewModelScope.launch {
                     workInfoFlow.collect { workInfo ->
                         if (workInfo?.state == WorkInfo.State.SUCCEEDED) {
-                            val audioUriFromAppDir = workInfo.outputData.getString(AudioFileCopyWorker.KEY_RESULT_URI)
-                            saveItem = saveItem.copy(alarm = saveItem.alarm.copy(audioUri = audioUriFromAppDir))
+                            val audioUriFromAppDir =
+                                workInfo.outputData.getString(AudioFileCopyWorker.KEY_RESULT_URI)
+                            saveItem =
+                                saveItem.copy(alarm = saveItem.alarm.copy(audioUri = audioUriFromAppDir))
 
                             val recordId = alarmRepository.saveAlarm(saveItem)
                             saveItem = saveItem.copy(alarm = saveItem.alarm.copy(id = recordId))
@@ -175,7 +179,9 @@ class AlarmEditViewModel(
     }
 
     private fun copyAudioToAppDir(uri: String, fileName: String): UUID {
+        // https://developer.android.com/develop/background-work/background-tasks/persistent/getting-started/define-work#expedited
         val copyWork = OneTimeWorkRequestBuilder<AudioFileCopyWorker>()
+            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
             .setInputData(
                 workDataOf(
                     AudioFileCopyWorker.KEY_INPUT_URI to uri,

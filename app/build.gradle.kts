@@ -76,6 +76,9 @@ dependencies {
     // Work manager
     implementation(libs.androidx.work.runtime.ktx)
     // App widget with compose
+    implementation(libs.androidx.glance)
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.glance.material3)
+    implementation(libs.androidx.glance.appwidget.preview)
+    implementation(libs.androidx.glance.preview)
 }
