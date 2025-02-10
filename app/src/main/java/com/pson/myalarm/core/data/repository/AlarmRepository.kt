@@ -10,7 +10,8 @@ interface IAlarmRepository {
     suspend fun deleteAlarms(alarmIds: List<Long>)
     suspend fun toggleAlarmActivation(alarmId: Long)
     suspend fun getAlarm(alarmId: Long): AlarmWithWeeklySchedules?
-    suspend fun getAllAlarms(): Flow<List<AlarmWithWeeklySchedules>>
+    fun observeAllAlarms(): Flow<List<AlarmWithWeeklySchedules>>
+    fun observeAllActiveAlarm(): Flow<List<AlarmWithWeeklySchedules>>
 }
 
 class AlarmRepository(private val alarmDao: AlarmDao) : IAlarmRepository {
@@ -34,7 +35,11 @@ class AlarmRepository(private val alarmDao: AlarmDao) : IAlarmRepository {
         return alarmDao.getById(alarmId)
     }
 
-    override suspend fun getAllAlarms(): Flow<List<AlarmWithWeeklySchedules>> {
-        return alarmDao.getAll()
+    override fun observeAllAlarms(): Flow<List<AlarmWithWeeklySchedules>> {
+        return alarmDao.observeAll()
+    }
+
+    override fun observeAllActiveAlarm(): Flow<List<AlarmWithWeeklySchedules>> {
+        return alarmDao.observeAllActive()
     }
 }

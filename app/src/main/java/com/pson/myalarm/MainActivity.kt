@@ -31,21 +31,25 @@ import com.pson.myalarm.ui.theme.MyAlarmTheme
 
 class MainActivity : ComponentActivity() {
 
+    private lateinit var globalStateManager: GlobalStateManager
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        globalStateManager = (this@MainActivity.application as MyAlarmApplication).globalStateManager
 
         // Stack alarm display screen on top if alarm is triggering
-        GlobalStateManager.observeAlarmTrigger(lifecycleScope) { alarmId ->
-            startActivity(
-                Intent(
-                    this@MainActivity,
-                    AlarmDisplayActivity::class.java
-                ).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    putExtra("ALARM_ID", alarmId)
-                }
-            )
-        }
+        globalStateManager
+            .observeAlarmTrigger(lifecycleScope) { alarmId ->
+                startActivity(
+                    Intent(
+                        this@MainActivity,
+                        AlarmDisplayActivity::class.java
+                    ).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        putExtra("ALARM_ID", alarmId)
+                    }
+                )
+            }
 
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.auto(
@@ -84,12 +88,12 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        GlobalStateManager.setIsMainActivityInForeground(true)
+        globalStateManager.setIsMainActivityInForeground(true)
     }
 
     override fun onStop() {
         super.onStop()
-        GlobalStateManager.setIsMainActivityInForeground(false)
+        globalStateManager.setIsMainActivityInForeground(false)
     }
 }
 

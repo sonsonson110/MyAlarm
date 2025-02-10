@@ -1,48 +1,36 @@
 package com.pson.myalarm
 
 import android.content.Context
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.createSavedStateHandle
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.work.WorkManager
 import com.pson.myalarm.core.alarm.AlarmScheduler
+import com.pson.myalarm.core.alarm.IAlarmScheduler
 import com.pson.myalarm.core.data.AlarmDatabase
 import com.pson.myalarm.core.data.repository.AlarmRepository
 import com.pson.myalarm.core.data.repository.IAlarmRepository
-import com.pson.myalarm.ui.screens.alarm_edit.AlarmEditViewModel
-import com.pson.myalarm.ui.screens.alarm_list.AlarmListViewModel
+import com.pson.myalarm.domain.ToggleAlarmUseCase
 
 interface IMyAlarmAppModule {
     val database: AlarmDatabase
     val alarmRepository: IAlarmRepository
-    val alarmScheduler: AlarmScheduler
-    val mainViewModelFactory: ViewModelProvider.Factory
+    val alarmScheduler: IAlarmScheduler
+    val workManager: WorkManager
+
+    // use case
+    val toggleAlarmUseCase: ToggleAlarmUseCase
 }
 
 class MyAlarmAppModule(private val appContext: Context) : IMyAlarmAppModule {
     override val database: AlarmDatabase by lazy { AlarmDatabase.getDatabase(appContext) }
 
-    override val alarmRepository: IAlarmRepository
-        get() = AlarmRepository(database.alarmDao())
+    override val alarmRepository: IAlarmRepository by lazy { AlarmRepository(database.alarmDao()) }
 
-    override val alarmScheduler: AlarmScheduler by lazy { AlarmScheduler(appContext) }
+    override val alarmScheduler: IAlarmScheduler by lazy { AlarmScheduler(appContext) }
 
-    override val mainViewModelFactory: ViewModelProvider.Factory
-        get() = viewModelFactory {
-            initializer {
-                AlarmListViewModel(
-                    alarmRepository,
-                    alarmScheduler
-                )
-            }
-            initializer {
-                AlarmEditViewModel(
-                    alarmRepository,
-                    alarmScheduler,
-                    this.createSavedStateHandle(),
-                    WorkManager.getInstance(appContext)
-                )
-            }
-        }
+    override val workManager: WorkManager = WorkManager.getInstance(appContext)
+
+    override val toggleAlarmUseCase: ToggleAlarmUseCase =
+        ToggleAlarmUseCase(
+            alarmRepository = alarmRepository,
+            alarmScheduler = alarmScheduler,
+        )
 }

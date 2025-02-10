@@ -20,20 +20,24 @@ import android.view.WindowManager
 import androidx.compose.ui.platform.ComposeView
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import androidx.work.WorkManager
 import com.pson.myalarm.AlarmDisplayActivity
 import com.pson.myalarm.GlobalStateManager
 import com.pson.myalarm.MyAlarmApplication
 import com.pson.myalarm.R
 import com.pson.myalarm.core.data.model.AlarmWithWeeklySchedules
 import com.pson.myalarm.core.data.repository.IAlarmRepository
+import com.pson.myalarm.glance.MyAlarmWidget
 import com.pson.myalarm.ui.components.AlarmOverlay
 import com.pson.myalarm.ui.theme.MyAlarmTheme
 import kotlinx.coroutines.CoroutineScope
@@ -59,8 +63,10 @@ class AlarmService : Service(), LifecycleOwner,
     override val lifecycle: Lifecycle = _lifecycleRegistry
 
     private var alarmId = -1L
+    private lateinit var globalStateManager: GlobalStateManager
     private lateinit var alarmScheduler: IAlarmScheduler
     private lateinit var alarmRepository: IAlarmRepository
+    private lateinit var workManager: WorkManager
 
     private var mediaPlayer: MediaPlayer? = null
     private lateinit var windowManager: WindowManager
@@ -69,11 +75,14 @@ class AlarmService : Service(), LifecycleOwner,
     private var autoSnoozeJob: Job? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
+
     override fun onCreate() {
         super.onCreate()
-
-        alarmRepository = MyAlarmApplication.appModule.alarmRepository
-        alarmScheduler = MyAlarmApplication.appModule.alarmScheduler
+        globalStateManager = (this.application as MyAlarmApplication).globalStateManager
+        val appModule = (this.application as MyAlarmApplication).appModule
+        alarmRepository = appModule.alarmRepository
+        alarmScheduler = appModule.alarmScheduler
+        workManager = appModule.workManager
 
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
 
@@ -92,9 +101,9 @@ class AlarmService : Service(), LifecycleOwner,
         } ?: return START_NOT_STICKY  // Don't start if no alarm found
 
         ensureNotificationChannelExists()
+        globalStateManager.setTriggeringAlarmId(alarmId)
 
         serviceScope.launch {
-            GlobalStateManager.setTriggeringAlarmId(alarmId)
             val notification = getAlarmNotification(item)
             startForeground(alarmId.hashCode(), notification)
 
@@ -112,7 +121,7 @@ class AlarmService : Service(), LifecycleOwner,
         autoSnoozeJob?.cancel() // Cancel any existing timer
 
         autoSnoozeJob = serviceScope.launch {
-            delay(50_000L)
+            delay(10_000L)
             // Auto snooze the alarm
             alarmScheduler.snooze(item)
             stopService()
@@ -147,6 +156,8 @@ class AlarmService : Service(), LifecycleOwner,
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setFullScreenIntent(fullScreenPendingIntent, true)  // Show even when locked
+                .setOngoing(true)
+                .setAutoCancel(false)
                 .build()
         }
 
@@ -203,14 +214,20 @@ class AlarmService : Service(), LifecycleOwner,
     }
 
     private fun stopService() {
+        globalStateManager.setTriggeringAlarmId(-1L)
         autoSnoozeJob?.cancel()
-        GlobalStateManager.setTriggeringAlarmId(-1)
         stopAlarmDisplayActivity()
         hideOverlayWindow()
         stopSound()
         // Remove the notification
         val notificationManager = NotificationManagerCompat.from(this)
         notificationManager.cancel(alarmId.hashCode())
+
+        // Update widget explicitly (stupid glance widget)
+        lifecycleScope.launch {
+            MyAlarmWidget().updateAll(applicationContext)
+        }
+
         // Stop the service
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()

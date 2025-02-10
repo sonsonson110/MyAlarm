@@ -2,7 +2,9 @@ package com.pson.myalarm.ui.screens.alarm_display
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.pson.myalarm.MyAlarmApplication
 import com.pson.myalarm.core.alarm.IAlarmScheduler
 import com.pson.myalarm.core.data.model.AlarmWithWeeklySchedules
@@ -48,10 +50,14 @@ class AlarmDisplayViewModel(
     companion object {
         fun createFactory(alarmId: Long) = object : ViewModelProvider.Factory {
             @Suppress("Unchecked_cast")
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
+                val application = checkNotNull(extras[APPLICATION_KEY]) as MyAlarmApplication
+                val repository = application.appModule.alarmRepository
+                val scheduler = application.appModule.alarmScheduler
+
                 return AlarmDisplayViewModel(
-                    alarmRepository = MyAlarmApplication.appModule.alarmRepository,
-                    alarmScheduler = MyAlarmApplication.appModule.alarmScheduler,
+                    alarmRepository = repository,
+                    alarmScheduler = scheduler,
                     alarmId = alarmId
                 ) as T
             }

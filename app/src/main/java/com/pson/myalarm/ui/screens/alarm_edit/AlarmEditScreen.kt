@@ -65,7 +65,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.pson.myalarm.MyAlarmApplication
 import com.pson.myalarm.R
 import com.pson.myalarm.core.data.model.DayOfWeek
 import com.pson.myalarm.ui.shared.DayCircle
@@ -77,7 +76,7 @@ import java.time.LocalTime
 internal fun AlarmEditScreen(
     onNavigateUp: (Long?) -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: AlarmEditViewModel = viewModel<AlarmEditViewModel>(factory = MyAlarmApplication.appModule.mainViewModelFactory)
+    viewModel: AlarmEditViewModel = viewModel<AlarmEditViewModel>(factory = AlarmEditViewModel.Factory)
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
 

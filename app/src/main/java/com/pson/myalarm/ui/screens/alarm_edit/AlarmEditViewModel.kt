@@ -2,20 +2,25 @@ package com.pson.myalarm.ui.screens.alarm_edit
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.workDataOf
-import com.pson.myalarm.core.alarm.AlarmScheduler
-import com.pson.myalarm.core.worker.AudioFileCopyWorker
+import com.pson.myalarm.MyAlarmApplication
+import com.pson.myalarm.core.alarm.IAlarmScheduler
 import com.pson.myalarm.core.data.model.Alarm
 import com.pson.myalarm.core.data.model.AlarmWithWeeklySchedules
 import com.pson.myalarm.core.data.model.DayOfWeek
 import com.pson.myalarm.core.data.model.WeeklySchedule
 import com.pson.myalarm.core.data.repository.IAlarmRepository
+import com.pson.myalarm.core.worker.AudioFileCopyWorker
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -32,7 +37,7 @@ import kotlin.coroutines.resumeWithException
 
 class AlarmEditViewModel(
     private val alarmRepository: IAlarmRepository,
-    private val alarmScheduler: AlarmScheduler,
+    private val alarmScheduler: IAlarmScheduler,
     savedStateHandle: SavedStateHandle,
     private val workManager: WorkManager
 ) : ViewModel() {
@@ -197,6 +202,26 @@ class AlarmEditViewModel(
         )
 
         return copyWork.id
+    }
+
+    companion object {
+        val Factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
+                val application = checkNotNull(extras[APPLICATION_KEY]) as MyAlarmApplication
+                val repository = application.appModule.alarmRepository
+                val scheduler = application.appModule.alarmScheduler
+                val workManager = application.appModule.workManager
+                val savedStateHandle = extras.createSavedStateHandle()
+
+                return AlarmEditViewModel(
+                    alarmRepository = repository,
+                    alarmScheduler = scheduler,
+                    savedStateHandle = savedStateHandle,
+                    workManager = workManager,
+                ) as T
+            }
+        }
     }
 }
 

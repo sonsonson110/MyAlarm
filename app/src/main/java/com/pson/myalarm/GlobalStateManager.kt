@@ -6,12 +6,15 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-object GlobalStateManager {
+class GlobalStateManager {
     private val _triggeringAlarmId = MutableStateFlow<Long>(-1)
+    val triggeringAlarmId = _triggeringAlarmId.asStateFlow()
+
     private val _mainActivityInForeground = MutableStateFlow(false)
 
     // Combined state flow that emits only when both conditions are met
@@ -35,11 +38,12 @@ object GlobalStateManager {
         _mainActivityInForeground.value = bool
     }
 
+    // Only use for alarm display screen
     fun observeAlarmTrigger(
-        lifecycleScope: CoroutineScope,
+        scope: CoroutineScope,
         onTrigger: (Long) -> Unit
     ) {
-        lifecycleScope.launch {
+        scope.launch {
             shouldShowAlarm.collect { (alarmId, isInForeground) ->
                 if (alarmId != -1L && isInForeground) {
                     onTrigger(alarmId)

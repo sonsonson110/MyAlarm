@@ -10,7 +10,9 @@ import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
+import androidx.glance.action.Action
 import androidx.glance.action.clickable
+import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.components.Scaffold
 import androidx.glance.appwidget.components.TitleBar
 import androidx.glance.appwidget.cornerRadius
@@ -35,15 +37,17 @@ import com.pson.myalarm.core.data.model.Alarm
 import com.pson.myalarm.core.data.model.AlarmWithWeeklySchedules
 import com.pson.myalarm.core.data.model.DayOfWeek
 import com.pson.myalarm.core.data.model.WeeklySchedule
+import com.pson.myalarm.glance.MyAlarmWidget
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
 // Use glance compose only, showing the most recent alarm
 @Composable
-internal fun AlarmWidget(
+internal fun OnGoingAlarmWidget(
     item: AlarmWithWeeklySchedules,
-    onWidgetClick: (Long) -> Unit,
-    onAlarmCancel: (Long) -> Unit,
+//    onWidgetClick: (Long) -> Unit,
+    onWidgetClick: Action, // Remove later
+    onAlarmCancel: () -> Unit,
 ) = with(item) {
     val timePart = alarm.alarmTime
         .format(DateTimeFormatter.ofPattern("hh:mm a"))
@@ -58,7 +62,9 @@ internal fun AlarmWidget(
                 title = "Ongoing alarm"
             )
         },
-        modifier = GlanceModifier.clickable { onWidgetClick(alarm.id) }
+//        Recover later
+//        modifier = GlanceModifier.clickable { onWidgetClick(alarm.id) }
+        modifier = GlanceModifier.clickable(onWidgetClick)
     ) {
         Column(modifier = GlanceModifier.fillMaxWidth()) {
             Row(verticalAlignment = Alignment.Bottom) {
@@ -94,41 +100,43 @@ internal fun AlarmWidget(
                 )
             }
             Spacer(GlanceModifier.height(6.dp))
-            Row {
-                com.pson.myalarm.core.data.model.DayOfWeek.entries.forEachIndexed { idx, day ->
-                    val daysInWeek = com.pson.myalarm.core.data.model.DayOfWeek.entries.size
-                    val isRepeatDay = weeklySchedules.map { it.dayOfWeek }.contains(day)
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = GlanceModifier.padding(end = if (idx != daysInWeek) 6.dp else 0.dp)
-                    ) {
-                        if (isRepeatDay) {
-                            Box(
-                                modifier = GlanceModifier
-                                    .width(6.dp).height(4.dp)
-                                    .background(GlanceTheme.colors.primary)
-                                    .cornerRadius(4.dp)
-                            ) {}
-                        } else {
-                            Spacer(
-                                modifier = GlanceModifier
-                                    .width(6.dp).height(4.dp)
+            if (weeklySchedules.isNotEmpty()) {
+                Row {
+                    com.pson.myalarm.core.data.model.DayOfWeek.entries.forEachIndexed { idx, day ->
+                        val daysInWeek = com.pson.myalarm.core.data.model.DayOfWeek.entries.size
+                        val isRepeatDay = weeklySchedules.map { it.dayOfWeek }.contains(day)
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = GlanceModifier.padding(end = if (idx != daysInWeek) 6.dp else 0.dp)
+                        ) {
+                            if (isRepeatDay) {
+                                Box(
+                                    modifier = GlanceModifier
+                                        .width(6.dp).height(4.dp)
+                                        .background(GlanceTheme.colors.primary)
+                                        .cornerRadius(4.dp)
+                                ) {}
+                            } else {
+                                Spacer(
+                                    modifier = GlanceModifier
+                                        .width(6.dp).height(4.dp)
+                                )
+                            }
+                            Text(
+                                day.abbreviation[0].toString(), style = TextStyle(
+                                    fontSize = 14.sp,
+                                    color = if (isRepeatDay) GlanceTheme.colors.primary else GlanceTheme.colors.onSurfaceVariant,
+                                    fontWeight = if (isRepeatDay) FontWeight.Bold else FontWeight.Normal,
+                                )
                             )
                         }
-                        Text(
-                            day.abbreviation[0].toString(), style = TextStyle(
-                                fontSize = 14.sp,
-                                color = if (isRepeatDay) GlanceTheme.colors.primary else GlanceTheme.colors.onSurfaceVariant,
-                                fontWeight = if (isRepeatDay) FontWeight.Bold else FontWeight.Normal,
-                            )
-                        )
                     }
                 }
             }
             Spacer(GlanceModifier.height(6.dp))
             Button(
                 "Cancel",
-                onClick = { onAlarmCancel(alarm.id) },
+                onClick = onAlarmCancel,
                 colors = ButtonDefaults.buttonColors(
                     backgroundColor = GlanceTheme.colors.surfaceVariant,
                     contentColor = GlanceTheme.colors.onSurfaceVariant
@@ -143,6 +151,8 @@ internal fun AlarmWidget(
 @Composable
 internal fun AlarmWidgetPreview() {
     GlanceTheme {
+        // Placeholder purpose
+        val startMainActivity = actionStartActivity(MyAlarmWidget.createMainActivityIntent())
         val item = AlarmWithWeeklySchedules(
             alarm = Alarm(
                 id = 0L,
@@ -157,6 +167,6 @@ internal fun AlarmWidgetPreview() {
                 WeeklySchedule(dayOfWeek = DayOfWeek.SUNDAY),
             )
         )
-        AlarmWidget(item, {}, {})
+        OnGoingAlarmWidget(item, startMainActivity, {})
     }
 }

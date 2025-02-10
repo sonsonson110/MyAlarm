@@ -14,7 +14,11 @@ import kotlinx.coroutines.flow.Flow
 interface AlarmDao {
     @Transaction
     @Query("SELECT * FROM alarms ORDER BY alarmTime")
-    fun getAll(): Flow<List<AlarmWithWeeklySchedules>>
+    fun observeAll(): Flow<List<AlarmWithWeeklySchedules>>
+
+    @Transaction
+    @Query("SELECT * FROM alarms WHERE isActive = 1")
+    fun observeAllActive(): Flow<List<AlarmWithWeeklySchedules>>
 
     @Transaction
     @Query("SELECT * FROM alarms WHERE id = :alarmId")

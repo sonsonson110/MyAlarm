@@ -1,18 +1,24 @@
 package com.pson.myalarm.ui.screens.alarm_list
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
-import com.pson.myalarm.core.alarm.AlarmScheduler
+import androidx.lifecycle.viewmodel.CreationExtras
+import com.pson.myalarm.MyAlarmApplication
+import com.pson.myalarm.core.alarm.IAlarmScheduler
 import com.pson.myalarm.core.data.model.AlarmWithWeeklySchedules
 import com.pson.myalarm.core.data.repository.IAlarmRepository
+import com.pson.myalarm.domain.ToggleAlarmUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class AlarmListViewModel(
+    private val toggleAlarmUseCase: ToggleAlarmUseCase,
     private val alarmRepository: IAlarmRepository,
-    private val alarmScheduler: AlarmScheduler,
+    private val alarmScheduler: IAlarmScheduler,
 ) : ViewModel() {
     private val _uiState: MutableStateFlow<AlarmListUiState> =
         MutableStateFlow(AlarmListUiState.Loading)
@@ -72,7 +78,7 @@ class AlarmListViewModel(
 
     private fun getAlarms() {
         viewModelScope.launch {
-            alarmRepository.getAllAlarms()
+            alarmRepository.observeAllAlarms()
                 .collect { alarms ->
                     _uiState.update {
                         if (alarms.isEmpty()) AlarmListUiState.Empty
@@ -84,12 +90,21 @@ class AlarmListViewModel(
 
     fun toggleAlarm(item: AlarmWithWeeklySchedules) {
         viewModelScope.launch {
-            if (!item.alarm.isActive) {
-                alarmScheduler.schedule(item)
-            } else {
-                alarmScheduler.cancel(item)
+            toggleAlarmUseCase(item)
+        }
+    }
+
+    companion object {
+        val Factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
+                val application = checkNotNull(extras[APPLICATION_KEY]) as MyAlarmApplication
+                return AlarmListViewModel(
+                    alarmRepository = application.appModule.alarmRepository,
+                    alarmScheduler = application.appModule.alarmScheduler,
+                    toggleAlarmUseCase = application.appModule.toggleAlarmUseCase
+                ) as T
             }
-            alarmRepository.toggleAlarmActivation(item.alarm.id)
         }
     }
 }
